@@ -1,0 +1,7 @@
+SDTM MAPPING — SYN-2026-01
+================================================
+  DM      120 records
+  AE      372 records
+  VS    2,691 records
+------------------------------------------------
+Conformance findings: 0

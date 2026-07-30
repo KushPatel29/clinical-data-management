@@ -1,0 +1,25 @@
+EDIT CHECK EXECUTION — SYN-2026-01
+==================================================
+Checks in specification:      10
+Form records evaluated:    1,992
+Queries raised:               49
+  query severity:             28
+  warning severity:           21
+--------------------------------------------------
+BY CHECK
+  EC-AE-06        13  Adverse event outcome is 'recovered/resolved
+  EC-VISIT-01      8  Visit performed outside the protocol-defined
+  EC-AE-04         7  Adverse event start date precedes the date o
+  EC-REQ           5  A field marked required on the CRF is blank.
+  EC-DS-01         4  Subject did not complete the study but no re
+  EC-AE-01         4  Adverse event end date precedes its start da
+  EC-VS-03         3  Systolic blood pressure is not greater than 
+  EC-AE-05         3  A serious adverse event has no action record
+  EC-RANGE         2  A numeric value falls outside the clinically
+--------------------------------------------------
+BY SITE
+  SITE-101         5
+  SITE-102        10
+  SITE-103         5
+  SITE-104        17
+  SITE-105        12

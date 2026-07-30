@@ -1,0 +1,13 @@
+MEDICAL CODING — SYN-2026-01
+====================================================
+Terms requiring coding:      640
+  auto-coded (exact):        469 (73.3%)
+  coded via synonym:         128 (20.0%)
+  ambiguous (to monitor):     12
+  uncoded (to site):          31
+Auto-code rate:            93.3%
+----------------------------------------------------
+CODING WORKLIST (ranked by records blocked)
+   16  [uncoded  ] felt off                           MedDRA
+   15  [uncoded  ] not himself                        MedDRA
+   12  [ambiguous] BP high                            MedDRA

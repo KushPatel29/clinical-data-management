@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install pytest
+      - name: Build the study database and every downstream artefact
+        run: |
+          python data_generator/generate_edc_data.py
+          python dvs/edit_checks.py
+          python dvs/query_management.py
+          python sdtm/map_to_sdtm.py
+          python coding/code_terms.py
+          python uat/generate_uat_plan.py
+      - name: Validate
+        run: pytest tests/ -v

@@ -1,0 +1,30 @@
+QUERY MANAGEMENT — SYN-2026-01
+======================================================
+Data cut:                 2026-07-30
+Queries raised:               49
+  closed:                     33 (67.3%)
+  open:                       16
+Median days to close:          6
+Open >30 days:                 9  <- the database-lock risk
+------------------------------------------------------
+OPEN QUERY AGING
+  0-7 days           5
+  8-14 days          1
+  15-30 days         1
+  31-60 days         4
+  60+ days           5
+------------------------------------------------------
+SITE PERFORMANCE
+  site          raised   open   close %  median d
+  SITE-101           5      1      80%         7
+  SITE-102          10      6      40%         8
+  SITE-103           5      0     100%         7
+  SITE-104          17      3      82%         6
+  SITE-105          12      6      50%        17
+------------------------------------------------------
+TOP CHECKS BY VOLUME
+  EC-AE-06          13
+  EC-VISIT-01        8
+  EC-AE-04           7
+  EC-REQ             5
+  EC-DS-01           4
