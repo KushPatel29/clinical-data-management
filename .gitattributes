@@ -1,0 +1,12 @@
+# Normalise line endings in the repository to LF, regardless of the platform a
+# contributor generates them on. Without this the study data lands in the repo
+# with whatever endings the generating machine used: Python's csv writer emits
+# CRLF on every platform, while write_text() emits LF on Linux and CRLF on
+# Windows, so the CSVs and the .txt/.md artefacts end up disagreeing with each
+# other inside the same commit. A clean rebuild then shows half the outputs as
+# modified when nothing has actually changed, which is exactly the kind of noise
+# that makes a diff useless for review.
+* text=auto
+
+*.png binary
+*.pbix binary
