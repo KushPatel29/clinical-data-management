@@ -22,5 +22,6 @@ jobs:
           python sdtm/map_to_sdtm.py
           python coding/code_terms.py
           python uat/generate_uat_plan.py
+          python analytics/make_dashboard.py
       - name: Validate
         run: pytest tests/ -v

@@ -3,7 +3,7 @@
 [![CI](https://github.com/KushPatel29/clinical-data-management/actions/workflows/ci.yml/badge.svg)](https://github.com/KushPatel29/clinical-data-management/actions/workflows/ci.yml)
 ![CDISC](https://img.shields.io/badge/CDISC-CDASH%20%2B%20SDTM-0B5FA5)
 ![Python](https://img.shields.io/badge/Python-stdlib%20only-3776AB?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-51%20passing-3B8C6E)
+![Tests](https://img.shields.io/badge/tests-58%20passing-3B8C6E)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 A clinical trial database built the way any other regulated system should be:
@@ -13,6 +13,14 @@ generated from the specification rather than written from memory.
 
 **Synthetic study SYN-2026-01 — 120 subjects, 5 sites, 5 visits, 8 forms.** No
 real trial, subjects, investigational product, or adverse events.
+
+![Data management status board: defect reconciliation, query aging, coding status, and site close rates](docs/dm_status_board.png)
+
+*The status board a data manager would actually open. Drawn as SVG by
+[`analytics/make_dashboard.py`](analytics/make_dashboard.py) — **standard library
+only**, like the rest of the repo, because a chart is not a good enough reason to
+take on a dependency. Every figure is read from the CSVs the validation engine
+produced.*
 
 ## The number that matters
 
@@ -150,7 +158,7 @@ python dvs/query_management.py               # aging, site performance
 python sdtm/map_to_sdtm.py                   # DM / AE / VS + conformance
 python coding/code_terms.py                  # MedDRA / WHODrug + worklist
 python uat/generate_uat_plan.py              # 80 UAT cases
-pytest tests/ -v                             # 51 invariants
+pytest tests/ -v                             # 58 invariants
 ```
 
 Pure standard library — no install step, no database, runs anywhere in seconds.
@@ -165,7 +173,7 @@ sdtm/             map_to_sdtm.py — DM/AE/VS + conformance + mapping spec
 coding/           code_terms.py — MedDRA/WHODrug coding + coder worklist
 uat/              generate_uat_plan.py — UAT cases from the specification
 output/           queries, query log, SDTM domains, coding worklist, UAT plan
-tests/            51 invariants: manifest reconciliation, CRF integrity,
+tests/            58 invariants: manifest reconciliation, CRF integrity,
                   SDTM structure, coding behaviour, query lifecycle, UAT coverage
 ```
 
