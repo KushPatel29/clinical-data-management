@@ -1,5 +1,6 @@
 # Clinical Data Management — study build, validation, and submission mapping
 
+[![CI](https://github.com/KushPatel29/clinical-data-management/actions/workflows/ci.yml/badge.svg)](https://github.com/KushPatel29/clinical-data-management/actions/workflows/ci.yml)
 ![CDISC](https://img.shields.io/badge/CDISC-CDASH%20%2B%20SDTM-0B5FA5)
 ![Python](https://img.shields.io/badge/Python-stdlib%20only-3776AB?logo=python&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-51%20passing-3B8C6E)
