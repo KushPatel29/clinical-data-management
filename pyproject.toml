@@ -37,7 +37,7 @@ select = [
 # The Streamlit entry point embeds CSS, HTML, Mermaid, and explanatory Markdown.
 # Enforcing Python's line limit inside those finished display strings makes the
 # source less readable without changing the rendered interface.
-"dashboard/app.py" = ["E501"]
+"dashboard/app.py" = ["E402", "E501"]
 
 [tool.pytest.ini_options]
 markers = [

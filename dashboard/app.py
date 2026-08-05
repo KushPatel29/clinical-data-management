@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+import sys
 from html import escape
+from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+# Community Cloud launches this file with ``dashboard/`` as the import root.
+# Add the repository root explicitly so the dashboard package resolves the same
+# way in Cloud, CI, AppTest, and a local ``streamlit run`` invocation.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from dashboard.data import (
     CSV_FILES,

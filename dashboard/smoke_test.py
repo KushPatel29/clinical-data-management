@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
@@ -29,7 +31,25 @@ def main() -> None:
     app.run()
     assert not app.exception, app.exception
     assert len(app.tabs) == 5
-    print("dashboard smoke test passed: full cohort and SITE-102 filter rendered")
+
+    # Streamlit Community Cloud executes with dashboard/ as the working
+    # directory. Exercise that exact import shape in a fresh interpreter so a
+    # root-only package assumption cannot pass locally and fail after deploy.
+    cloud_check = """
+from streamlit.testing.v1 import AppTest
+app = AppTest.from_file('app.py', default_timeout=60).run()
+assert not app.exception, app.exception
+assert len(app.tabs) == 5
+"""
+    subprocess.run(
+        [sys.executable, "-c", cloud_check],
+        cwd=ROOT / "dashboard",
+        check=True,
+        timeout=90,
+    )
+    print(
+        "dashboard smoke test passed: full cohort, SITE-102, and Cloud import shape rendered"
+    )
 
 
 if __name__ == "__main__":
