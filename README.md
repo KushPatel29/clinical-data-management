@@ -1,6 +1,7 @@
 # Clinical Data Management — trial build, FHIR ingestion, and a SQL Server warehouse
 
 [![CI](https://github.com/KushPatel29/clinical-data-management/actions/workflows/ci.yml/badge.svg)](https://github.com/KushPatel29/clinical-data-management/actions/workflows/ci.yml)
+[![Live dashboard](https://img.shields.io/badge/Streamlit-live_dashboard-FF4B4B?logo=streamlit&logoColor=white)](https://kush-clinical-data-dashboard.streamlit.app/)
 ![CDISC](https://img.shields.io/badge/CDISC-CDASH%20%2B%20SDTM-0B5FA5)
 ![HL7 FHIR](https://img.shields.io/badge/HL7%20FHIR-R4-E4002B)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927)
@@ -27,6 +28,15 @@ the hospital's warehouse, not of the EDC, because the EDC has no patients in it
 yet. `dw.vw_trial_feasibility` is that count.
 
 Everything here is synthetic. No real trial, no real patients, no PHI.
+
+**[Open the live Clinical Evidence Console →](https://kush-clinical-data-dashboard.streamlit.app/)**
+
+The Streamlit console is a read-only view over the versioned evidence in this
+repository. Its site, arm, and consent-window controls apply one cohort across
+enrollment, query, safety, coding, and vital-sign views. Separate FHIR and SQL
+Server views expose the fixed benchmark run, including quarantine reasons,
+warehouse row lineage, Type 2 history, and before/after optimizer-plan evidence.
+Every headline claim carries its source or denominator in the interface.
 
 ---
 
