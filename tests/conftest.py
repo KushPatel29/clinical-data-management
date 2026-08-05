@@ -49,3 +49,22 @@ def item_data():
 @pytest.fixture(scope="session")
 def subjects():
     return read(ROOT / "data" / "subjects.csv")
+
+
+# ---------------------------------------------------------------------------
+# Options and markers for the warehouse half of the suite.
+#
+# The CDM half above runs anywhere with nothing installed. The warehouse tests
+# need SQL Server, and the live-server test needs the network. Neither is a
+# reason for the suite to fail on a laptop that has neither — they skip, with
+# the reason printed, and CI provides both.
+# ---------------------------------------------------------------------------
+
+def pytest_addoption(parser):
+    parser.addoption("--live", action="store_true", default=False,
+                     help="run tests that call the public HAPI FHIR server")
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "live: hits a real network service")
+    config.addinivalue_line("markers", "warehouse: needs a reachable SQL Server")

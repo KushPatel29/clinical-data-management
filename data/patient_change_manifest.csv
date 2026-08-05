@@ -1,0 +1,4 @@
+patient_id,new_version_id,change_date,change_kind,city_before,city_after,marital_before,marital_after
+083563aa-d1e4-5201-e6d1-7000d4b794c5,2,2026-08-03,address,Chicopee,Worcester,Never Married,Never Married
+49a5e03d-58b8-350e-d3c6-0ec318e61187,2,2026-08-03,both,Lynn,Lowell,Never Married,Widowed
+a3fca01b-b536-aeac-6a7c-aa68b889abff,2,2026-08-03,marital,Chicopee,Chicopee,Divorced,Widowed

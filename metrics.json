@@ -1,0 +1,130 @@
+{
+  "generated_at_utc": "2026-08-05T19:39:34Z",
+  "full_generation": {
+    "generator": "synthea",
+    "population": 10000,
+    "seed": 20260806,
+    "reference_date": "20260801",
+    "jar_sha256": "7fdbc2951d305eebac1fa46b1027347efb7380e93053e39ca2ee86613beb84f9",
+    "jar_bytes": 197024912,
+    "java": "openjdk version 21.0.12 2026-07-21 LTS",
+    "elapsed_seconds": 120.9,
+    "resources_generated": 1663658,
+    "resource_counts": {
+      "Condition": 139752,
+      "Encounter": 169906,
+      "MedicationRequest": 106085,
+      "Observation": 925283,
+      "Organization": 1137,
+      "Patient": 10000,
+      "Practitioner": 1137,
+      "Procedure": 310358
+    }
+  },
+  "live_rest": {
+    "server": "https://hapi.fhir.org/baseR4",
+    "observed_on": "2026-08-05",
+    "writes_performed": 0,
+    "pulls": {
+      "Patient": {"resources": 76, "rejected": 0},
+      "Observation": {
+        "resources": 200,
+        "rejected": 56,
+        "reasons": {"code_without_coding": 53, "missing_status": 3}
+      },
+      "Encounter": {
+        "resources": 150,
+        "rejected": 8,
+        "reasons": {"missing_class": 6, "missing_status": 2}
+      }
+    }
+  },
+  "source": {
+    "generator": "synthea",
+    "population": 20,
+    "seed": 20260806,
+    "reference_date": "20260801",
+    "jar_sha256": "7fdbc2951d305eebac1fa46b1027347efb7380e93053e39ca2ee86613beb84f9",
+    "resources_generated": 4640,
+    "resource_counts": {
+      "Condition": 360,
+      "Encounter": 371,
+      "MedicationRequest": 279,
+      "Observation": 2683,
+      "Organization": 75,
+      "Patient": 20,
+      "Practitioner": 75,
+      "Procedure": 777
+    }
+  },
+  "server": {
+    "edition": "Developer Edition (64-bit)",
+    "product_version": "16.0.1000.6",
+    "product_level": "RTM",
+    "engine_edition": 3
+  },
+  "ingest": {
+    "initial_read": 4640,
+    "initial_accepted": 4640,
+    "initial_rejected": 0,
+    "initial_seconds": 1.66,
+    "changefeed_patients": 3,
+    "changefeed_accepted": 3
+  },
+  "row_counts": {
+    "raw.fhir_resource": 4643,
+    "stg.ingest_rejects": 0,
+    "norm.code_system": 8,
+    "norm.code_concept": 381,
+    "norm.organization": 75,
+    "norm.practitioner": 75,
+    "norm.practitioner_identifier": 75,
+    "norm.patient": 20,
+    "norm.patient_address": 20,
+    "norm.encounter": 371,
+    "norm.condition": 360,
+    "norm.observation": 2683,
+    "norm.observation_component": 1325,
+    "norm.procedure": 777,
+    "norm.medication_request": 279,
+    "norm.resource_coding": 3839,
+    "dw.DimDate": 49674,
+    "dw.DimPatient": 24,
+    "dw.DimProvider": 76,
+    "dw.DimOrganization": 76,
+    "dw.DimDiagnosis": 81,
+    "dw.DimProcedure": 69,
+    "dw.DimObservationCode": 113,
+    "dw.DimMedication": 28,
+    "dw.DimEncounterType": 30,
+    "dw.FactEncounter": 371,
+    "dw.FactObservation": 3887,
+    "dw.FactMedicationOrder": 279,
+    "dw.FactEncounterDiagnosis": 360,
+    "dw.FactProcedure": 777
+  },
+  "quality": {
+    "encounters_with_resolved_provider": 371,
+    "encounters_with_resolved_organization": 371,
+    "facts_on_unknown_patient": 0,
+    "inferred_dimension_rows": 0,
+    "patients_with_multiple_versions": 3,
+    "scd2_max_versions_per_patient": 2,
+    "medication_orders_via_reference": 23,
+    "observations_with_multiple_codings": 19,
+    "inpatient_encounters": 12,
+    "readmissions_30d": 0,
+    "observations_without_a_value": 0
+  },
+  "timings_seconds": {
+    "schema": 0.58,
+    "ingest (bulk)": 1.66,
+    "shred raw -> norm": 6.29,
+    "load norm -> dw": 2.51,
+    "change feed": 0.0,
+    "ingest (change feed)": 0.07,
+    "re-shred and re-load (SCD2)": 7.09,
+    "measure": 0.22
+  },
+  "total_seconds": 18.42
+}

@@ -1,0 +1,285 @@
+{
+  "measured_at_utc": "2026-08-05T21:54:58Z",
+  "server": {
+    "edition": "Developer Edition (64-bit)",
+    "product_version": "16.0.4265.3",
+    "product_level": "RTM",
+    "engine_edition": 3
+  },
+  "host": {
+    "platform": "Linux-6.17.0-1020-azure-x86_64-with-glibc2.39",
+    "processor": "x86_64",
+    "python": "3.11.15"
+  },
+  "queries": {
+    "Q1": {
+      "title": "Result trend for one observation type over a date range",
+      "question": "Monthly mean and volume for a single LOINC code across a two-year window, split by patient age band \u2014 the shape behind every 'is this measure drifting' tile on a clinical dashboard.",
+      "sql": "SELECT d.month_year, p.age_band, COUNT_BIG(*) AS results, AVG(f.value_numeric) AS mean_value FROM dw.FactObservation AS f JOIN dw.DimDate AS d ON d.date_key = f.effective_date_key JOIN dw.DimPatient AS p ON p.patient_key = f.patient_key WHERE f.observation_code_key = ( SELECT TOP (1) observation_code_key FROM dw.FactObservation GROUP BY observation_code_key ORDER BY COUNT_BIG(*) DESC) AND f.is_numeric = 1 AND d.full_date >= '2025-01-01' GROUP BY d.month_year, p.age_band;",
+      "sql_after": "SELECT d.month_year, p.age_band, COUNT_BIG(*) AS results, AVG(f.value_numeric) AS mean_value FROM dw.FactObservation AS f JOIN dw.DimDate AS d ON d.date_key = f.effective_date_key JOIN dw.DimPatient AS p ON p.patient_key = f.patient_key WHERE f.observation_code_key = ( SELECT TOP (1) observation_code_key FROM dw.FactObservation GROUP BY observation_code_key ORDER BY COUNT_BIG(*) DESC) AND f.is_numeric = 1 AND d.full_date >= '2025-01-01' GROUP BY d.month_year, p.age_band;",
+      "fix": "covering nonclustered index",
+      "fix_sql": "CREATE NONCLUSTERED INDEX IX_FactObservation_code_date ON dw.FactObservation (observation_code_key, effective_date_key) INCLUDE (patient_key, value_numeric, is_numeric);",
+      "fix_build_seconds": 0.02,
+      "before": {
+        "logical_reads_total": 0,
+        "logical_reads_by_table": {},
+        "cpu_ms": 0,
+        "elapsed_ms": 0,
+        "wall_seconds": 0.009,
+        "rows_returned": 91,
+        "estimated_subtree_cost": 0.6473,
+        "batch_mode": false,
+        "degree_of_parallelism": 1,
+        "non_parallel_reason": "",
+        "top_operators": [
+          {
+            "physical": "Compute Scalar",
+            "logical": "Compute Scalar",
+            "subtree_cost": 0.6473
+          },
+          {
+            "physical": "Stream Aggregate",
+            "logical": "Aggregate",
+            "subtree_cost": 0.6473
+          },
+          {
+            "physical": "Sort",
+            "logical": "Sort",
+            "subtree_cost": 0.6473
+          },
+          {
+            "physical": "Nested Loops",
+            "logical": "Inner Join",
+            "subtree_cost": 0.6359
+          },
+          {
+            "physical": "Nested Loops",
+            "logical": "Inner Join",
+            "subtree_cost": 0.6271
+          },
+          {
+            "physical": "Nested Loops",
+            "logical": "Inner Join",
+            "subtree_cost": 0.5951
+          }
+        ],
+        "plan": "docs/plans/Q1_before.sqlplan"
+      },
+      "after": {
+        "logical_reads_total": 0,
+        "logical_reads_by_table": {},
+        "cpu_ms": 0,
+        "elapsed_ms": 0,
+        "wall_seconds": 0.005,
+        "rows_returned": 91,
+        "estimated_subtree_cost": 0.1524,
+        "batch_mode": false,
+        "degree_of_parallelism": 1,
+        "non_parallel_reason": "",
+        "top_operators": [
+          {
+            "physical": "Compute Scalar",
+            "logical": "Compute Scalar",
+            "subtree_cost": 0.1524
+          },
+          {
+            "physical": "Stream Aggregate",
+            "logical": "Aggregate",
+            "subtree_cost": 0.1524
+          },
+          {
+            "physical": "Sort",
+            "logical": "Sort",
+            "subtree_cost": 0.1524
+          },
+          {
+            "physical": "Nested Loops",
+            "logical": "Inner Join",
+            "subtree_cost": 0.141
+          },
+          {
+            "physical": "Nested Loops",
+            "logical": "Inner Join",
+            "subtree_cost": 0.1322
+          },
+          {
+            "physical": "Nested Loops",
+            "logical": "Inner Join",
+            "subtree_cost": 0.1002
+          }
+        ],
+        "plan": "docs/plans/Q1_after.sqlplan"
+      }
+    },
+    "Q2": {
+      "title": "Whole-warehouse aggregate across every observation code",
+      "question": "Volume, mean and spread for every observation code by fiscal quarter \u2014 the extract behind a Power BI import model, which reads the whole fact table rather than a slice of it.",
+      "sql": "SELECT c.code, c.code_display, d.fiscal_year, d.fiscal_quarter, COUNT_BIG(*) AS results, AVG(f.value_numeric) AS mean_value, MIN(f.value_numeric) AS min_value, MAX(f.value_numeric) AS max_value FROM dw.FactObservation AS f JOIN dw.DimObservationCode AS c ON c.observation_code_key = f.observation_code_key JOIN dw.DimDate AS d ON d.date_key = f.effective_date_key WHERE f.is_numeric = 1 GROUP BY c.code, c.code_display, d.fiscal_year, d.fiscal_quarter;",
+      "sql_after": "SELECT c.code, c.code_display, d.fiscal_year, d.fiscal_quarter, COUNT_BIG(*) AS results, AVG(f.value_numeric) AS mean_value, MIN(f.value_numeric) AS min_value, MAX(f.value_numeric) AS max_value FROM dw.FactObservation AS f JOIN dw.DimObservationCode AS c ON c.observation_code_key = f.observation_code_key JOIN dw.DimDate AS d ON d.date_key = f.effective_date_key WHERE f.is_numeric = 1 GROUP BY c.code, c.code_display, d.fiscal_year, d.fiscal_quarter;",
+      "fix": "nonclustered columnstore index",
+      "fix_sql": "CREATE NONCLUSTERED COLUMNSTORE INDEX NCCI_FactObservation ON dw.FactObservation (observation_code_key, effective_date_key, patient_key, value_numeric, is_numeric);",
+      "fix_build_seconds": 0.08,
+      "before": {
+        "logical_reads_total": 0,
+        "logical_reads_by_table": {},
+        "cpu_ms": 0,
+        "elapsed_ms": 0,
+        "wall_seconds": 0.033,
+        "rows_returned": 674,
+        "estimated_subtree_cost": 1.4635,
+        "batch_mode": false,
+        "degree_of_parallelism": 1,
+        "non_parallel_reason": "",
+        "top_operators": [
+          {
+            "physical": "Compute Scalar",
+            "logical": "Compute Scalar",
+            "subtree_cost": 1.4635
+          },
+          {
+            "physical": "Stream Aggregate",
+            "logical": "Aggregate",
+            "subtree_cost": 1.4635
+          },
+          {
+            "physical": "Sort",
+            "logical": "Sort",
+            "subtree_cost": 1.4542
+          },
+          {
+            "physical": "Hash Match",
+            "logical": "Inner Join",
+            "subtree_cost": 0.9812
+          },
+          {
+            "physical": "Hash Match",
+            "logical": "Inner Join",
+            "subtree_cost": 0.8831
+          },
+          {
+            "physical": "Clustered Index Scan",
+            "logical": "Clustered Index Scan",
+            "subtree_cost": 0.4113
+          }
+        ],
+        "plan": "docs/plans/Q2_before.sqlplan"
+      },
+      "after": {
+        "logical_reads_total": 0,
+        "logical_reads_by_table": {},
+        "cpu_ms": 0,
+        "elapsed_ms": 0,
+        "wall_seconds": 0.029,
+        "rows_returned": 674,
+        "estimated_subtree_cost": 0.5085,
+        "batch_mode": true,
+        "degree_of_parallelism": 1,
+        "non_parallel_reason": "",
+        "top_operators": [
+          {
+            "physical": "Compute Scalar",
+            "logical": "Compute Scalar",
+            "subtree_cost": 0.5085
+          },
+          {
+            "physical": "Stream Aggregate",
+            "logical": "Aggregate",
+            "subtree_cost": 0.5085
+          },
+          {
+            "physical": "Clustered Index Seek",
+            "logical": "Clustered Index Seek",
+            "subtree_cost": 0.5085
+          },
+          {
+            "physical": "Sort",
+            "logical": "Sort",
+            "subtree_cost": 0.4991
+          },
+          {
+            "physical": "Hash Match",
+            "logical": "Inner Join",
+            "subtree_cost": 0.4491
+          },
+          {
+            "physical": "Adaptive Join",
+            "logical": "Inner Join",
+            "subtree_cost": 0.435
+          }
+        ],
+        "plan": "docs/plans/Q2_after.sqlplan"
+      }
+    },
+    "Q3": {
+      "title": "Reference resolution across the whole raw table",
+      "question": "The shape of every shredding statement: pull a FHIR reference out of a million JSON documents and turn it into a local key. Not a reporting query \u2014 the load itself, which is where this warehouse spends most of its time. The fix here is a rewrite rather than an index, and it is the largest single change in the repository.",
+      "sql": "SELECT COUNT_BIG(*) AS resolved FROM raw.fhir_resource AS r WHERE r.resource_type = 'Observation' AND dbo.fn_reference_id_multi_statement( JSON_VALUE(r.payload, '$.subject.reference')) IS NOT NULL;",
+      "sql_after": "SELECT COUNT_BIG(*) AS resolved FROM raw.fhir_resource AS r CROSS APPLY norm.tvf_reference_id( JSON_VALUE(r.payload, '$.subject.reference')) AS subj WHERE r.resource_type = 'Observation' AND subj.resource_id IS NOT NULL;",
+      "fix": "replace the scalar UDF with an inline table-valued function",
+      "fix_sql": "",
+      "fix_build_seconds": 0.0,
+      "before": {
+        "logical_reads_total": 0,
+        "logical_reads_by_table": {},
+        "cpu_ms": 0,
+        "elapsed_ms": 0,
+        "wall_seconds": 0.351,
+        "rows_returned": 1,
+        "estimated_subtree_cost": 2.3602,
+        "batch_mode": false,
+        "degree_of_parallelism": 1,
+        "non_parallel_reason": "TSQLUserDefinedFunctionsNotParallelizable",
+        "top_operators": [
+          {
+            "physical": "Stream Aggregate",
+            "logical": "Aggregate",
+            "subtree_cost": 2.3602
+          },
+          {
+            "physical": "Filter",
+            "logical": "Filter",
+            "subtree_cost": 2.3531
+          },
+          {
+            "physical": "Clustered Index Seek",
+            "logical": "Clustered Index Seek",
+            "subtree_cost": 2.3437
+          }
+        ],
+        "plan": "docs/plans/Q3_before.sqlplan"
+      },
+      "after": {
+        "logical_reads_total": 0,
+        "logical_reads_by_table": {},
+        "cpu_ms": 0,
+        "elapsed_ms": 0,
+        "wall_seconds": 0.453,
+        "rows_returned": 1,
+        "estimated_subtree_cost": 2.3913,
+        "batch_mode": false,
+        "degree_of_parallelism": 1,
+        "non_parallel_reason": "",
+        "top_operators": [
+          {
+            "physical": "Stream Aggregate",
+            "logical": "Aggregate",
+            "subtree_cost": 2.3913
+          },
+          {
+            "physical": "Filter",
+            "logical": "Filter",
+            "subtree_cost": 2.3841
+          },
+          {
+            "physical": "Clustered Index Seek",
+            "logical": "Clustered Index Seek",
+            "subtree_cost": 2.3437
+          }
+        ],
+        "plan": "docs/plans/Q3_after.sqlplan"
+      }
+    }
+  },
+  "fact_observation_rows": 15071,
+  "fact_encounter_rows": 1744
+}
