@@ -29,14 +29,38 @@ yet. `dw.vw_trial_feasibility` is that count.
 
 Everything here is synthetic. No real trial, no real patients, no PHI.
 
-**[Open the live Clinical Evidence Console →](https://kush-clinical-data-dashboard.streamlit.app/)**
+## Live evidence console
 
-The Streamlit console is a read-only view over the versioned evidence in this
-repository. Its site, arm, and consent-window controls apply one cohort across
-enrollment, query, safety, coding, and vital-sign views. Separate FHIR and SQL
-Server views expose the fixed benchmark run, including quarantine reasons,
-warehouse row lineage, Type 2 history, and before/after optimizer-plan evidence.
-Every headline claim carries its source or denominator in the interface.
+[![Clinical Evidence Console overview showing cohort controls and evidence lineage](docs/dashboard/clinical-evidence-overview.png)](https://kush-clinical-data-dashboard.streamlit.app/)
+
+<p align="center">
+  <strong><a href="https://kush-clinical-data-dashboard.streamlit.app/">Launch the interactive Clinical Evidence Console →</a></strong><br>
+  Five linked views · one coherent cohort · synthetic data only
+</p>
+
+The console is a read-only view over the versioned evidence in this repository.
+Site, arm, and consent-window controls apply one cohort across enrollment,
+query operations, safety, coding, and vital signs. The FHIR and SQL Server views
+retain their fixed benchmark context, including quarantine reasons, warehouse
+row lineage, Type 2 history, and before/after optimizer-plan evidence. Every
+headline claim carries its source or denominator in the interface.
+
+<table>
+  <tr>
+    <td width="50%">
+      <a href="https://kush-clinical-data-dashboard.streamlit.app/">
+        <img src="docs/dashboard/quality-site-102.png" alt="SITE-102 quality drilldown with query reconciliation, aging, and an escalation queue">
+      </a>
+      <br><sub><strong>Operational drilldown.</strong> SITE-102 narrows the trial cohort to 27 subjects and exposes six open queries, including two at least 60 days old.</sub>
+    </td>
+    <td width="50%">
+      <a href="https://kush-clinical-data-dashboard.streamlit.app/">
+        <img src="docs/dashboard/fhir-warehouse-proof.png" alt="FHIR warehouse view with generated resources, SQL Server timings, and dimensional fact counts">
+      </a>
+      <br><sub><strong>Scale and lineage.</strong> The fixed benchmark connects 1.66M generated FHIR resources to measured SQL Server loading and query-plan evidence.</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
