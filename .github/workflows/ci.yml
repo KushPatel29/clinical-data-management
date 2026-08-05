@@ -46,6 +46,26 @@ jobs:
         run: pytest tests/test_edit_checks.py tests/test_sdtm_and_coding.py tests/test_dashboard.py -v
 
   # ---------------------------------------------------------------------------
+  # The public evidence console. It reads only committed synthetic artefacts,
+  # so this test can exercise the same entry point Streamlit Community Cloud
+  # serves without a database, credentials, or a browser process.
+  # ---------------------------------------------------------------------------
+  dashboard:
+    name: Streamlit evidence console
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dashboard dependencies
+        run: pip install -r dashboard/requirements.txt
+
+      - name: Render the full cohort and a site-filtered cohort
+        run: python -m dashboard.smoke_test
+
+  # ---------------------------------------------------------------------------
   # Lint, scoped to the warehouse half.
   #
   # The CDM half predates this configuration and is excluded in pyproject.toml,
