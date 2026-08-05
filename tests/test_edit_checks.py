@@ -17,7 +17,6 @@ visit, which is not always the record carrying the visit date, so four injected
 protocol deviations went silently undetected.
 """
 
-import csv
 import sys
 from collections import Counter
 from pathlib import Path
@@ -28,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from crf.study_metadata import CODELISTS, FORMS, VISITS, all_items  # noqa: E402
-from dvs.edit_checks import CHECKS, CHECK_INDEX, QUERY, WARNING  # noqa: E402
+from dvs.edit_checks import CHECK_INDEX, CHECKS, QUERY, WARNING  # noqa: E402
 
 
 def key(row, check_field):

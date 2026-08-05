@@ -1,0 +1,42 @@
+# Lint configuration only. There is no package to build here — the repository is
+# two pipelines and a schema, run from the working directory.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+# The CDM half predates this configuration and is deliberately left untouched by
+# the warehouse work — its four findings are cosmetic (an unused import, three
+# f-strings with no placeholders) and fixing them would mean editing files whose
+# whole value right now is that they are provably unchanged and still green.
+# Worth doing; not worth doing in the same commit as a warehouse.
+exclude = ["crf", "dvs", "sdtm", "coding", "uat", "data_generator"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # import sorting
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Every module in the warehouse half puts the repository root on sys.path before
+# importing from it, so its imports cannot be at the top of the file. That is a
+# consequence of running scripts from the working directory rather than
+# installing a package, which is the right trade for a repository someone clones
+# to read.
+"db/*.py" = ["E402"]
+"fhir/*.py" = ["E402"]
+"docs/*.py" = ["E402"]
+"analytics/*.py" = ["E402"]
+"tests/*.py" = ["E402"]
+"tests/dq/*.py" = ["E402"]
+
+[tool.pytest.ini_options]
+markers = [
+    "warehouse: needs a reachable SQL Server",
+    "live: hits a real network service",
+]

@@ -1,3 +1,17 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# The FHIR extract. A 10,000-patient Synthea run is 5.8 GB of JSON, which takes
+# longer to clone than to regenerate — and a repository holding both a generator
+# and its output is a repository where the two will disagree. The command that
+# produces it is committed (synthea/synthea.properties and fhir/synthea.py), and
+# every run writes data/synthea/provenance.json recording the jar's SHA-256 so
+# a number in the README can be traced to the binary behind it.
+data/synthea/
+
+# Synthea itself. 197 MB.
+synthea/*.jar
+
+# Local connection overrides.
+.env

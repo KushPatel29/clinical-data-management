@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from coding.code_terms import MEDDRA, code, normalise  # noqa: E402
-from crf.study_metadata import CODELISTS, FORMS, VISITS  # noqa: E402
+from crf.study_metadata import FORMS, VISITS  # noqa: E402
 from dvs.edit_checks import CHECKS  # noqa: E402
 from sdtm.map_to_sdtm import REQUIRED, VS_TESTS  # noqa: E402
 
@@ -87,8 +87,8 @@ def test_sequence_assignment_is_deterministic(ae):
     order the records were read. A sequence number that changes between runs
     makes every downstream cross-reference — and every regulator query about
     'event 3' — unreproducible."""
-    from sdtm.map_to_sdtm import build_ae
     from dvs.edit_checks import load_records
+    from sdtm.map_to_sdtm import build_ae
     records = load_records()
     first = [(r["USUBJID"], r["AESEQ"], r["AETERM"]) for r in build_ae(records)]
     second = [(r["USUBJID"], r["AESEQ"], r["AETERM"])

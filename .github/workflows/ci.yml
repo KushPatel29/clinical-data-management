@@ -5,15 +5,28 @@ on:
   pull_request:
 
 jobs:
-  build:
+  # ---------------------------------------------------------------------------
+  # The clinical data management pipeline.
+  #
+  # Unchanged from before the warehouse existed, and deliberately so: it installs
+  # pytest and nothing else, because the CDM half of this repository is standard
+  # library only and that property is worth keeping true rather than merely
+  # claimed. This job is also the one the README's CDISC claims depend on, so it
+  # stays independent — a warehouse failure must not be able to mask a
+  # regression in the validation engine, and vice versa.
+  # ---------------------------------------------------------------------------
+  cdm:
+    name: CDM pipeline (no database)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+
       - name: Install
         run: pip install pytest
+
       - name: Build the study database and every downstream artefact
         run: |
           python data_generator/generate_edc_data.py
@@ -23,5 +36,237 @@ jobs:
           python coding/code_terms.py
           python uat/generate_uat_plan.py
           python analytics/make_dashboard.py
+
       - name: Validate
-        run: pytest tests/ -v
+        # Named explicitly rather than filtered with -m. This job has pytest and
+        # nothing else installed, so collecting the FHIR tests would fail on
+        # importing httpx — and that failure would look like a broken test suite
+        # rather than what it is. Naming the CDM tests is also what proves the
+        # claim: these run with no third-party package present at all.
+        run: pytest tests/test_edit_checks.py tests/test_sdtm_and_coding.py tests/test_dashboard.py -v
+
+  # ---------------------------------------------------------------------------
+  # Lint, scoped to the warehouse half.
+  #
+  # The CDM half predates this configuration and is excluded in pyproject.toml,
+  # with the reason written next to the exclusion — its remaining findings are
+  # cosmetic, and editing files whose current value is that they are provably
+  # unchanged is the wrong trade to make in the same commit as a warehouse.
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check .
+
+  # ---------------------------------------------------------------------------
+  # The FHIR ingestion layer, without a database.
+  #
+  # Model validation, reference parsing, pagination and backoff are all
+  # properties of the code rather than of the data, so they are tested against a
+  # scripted transport and no server at all.
+  # ---------------------------------------------------------------------------
+  fhir:
+    name: FHIR ingestion (no database)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install pytest httpx pydantic
+
+      - name: Test the models and the REST client
+        run: pytest tests/test_fhir_models.py tests/test_fhir_client.py -v
+
+  # ---------------------------------------------------------------------------
+  # The warehouse, end to end, against a real SQL Server 2022.
+  #
+  # 100 patients rather than the 10,000 the README's measurements come from:
+  # enough to exercise every path — multi-version patients, both medication
+  # choice branches, multi-coded observations, late-arriving members — and small
+  # enough to finish in a few minutes on a shared runner.
+  # ---------------------------------------------------------------------------
+  warehouse:
+    name: SQL Server warehouse
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD || 'Warehouse!Dev2026' }}
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+
+    env:
+      CDM_SQL_SERVER: localhost,1433
+      CDM_SQL_DATABASE: ClinicalWarehouse
+      CDM_SQL_USER: sa
+      CDM_SQL_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD || 'Warehouse!Dev2026' }}
+      SYNTHEA_JAR: ${{ github.workspace }}/synthea/synthea-with-dependencies.jar
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install the ODBC driver
+        # The runner image usually ships msodbcsql18 already; installing it
+        # unconditionally would fail the build on the day it does. This checks.
+        run: |
+          if ! odbcinst -q -d | grep -qi "ODBC Driver 1[78] for SQL Server"; then
+            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+              | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc > /dev/null
+            curl -fsSL https://packages.microsoft.com/config/ubuntu/22.04/prod.list \
+              | sudo tee /etc/apt/sources.list.d/mssql-release.list > /dev/null
+            sudo apt-get update
+            sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
+          fi
+          odbcinst -q -d
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Wait for SQL Server
+        # A container that is running is not a container that is accepting
+        # connections; SQL Server takes 20-40 seconds to finish starting. Polling
+        # for a successful login is the only reliable signal.
+        run: |
+          python - <<'PY'
+          import sys, time
+          sys.path.insert(0, ".")
+          from db.connection import available
+          for attempt in range(1, 41):
+              ok, reason = available()
+              if ok:
+                  print(f"ready after {attempt} attempts: {reason}")
+                  raise SystemExit(0)
+              print(f"  attempt {attempt}: {reason[:120]}")
+              time.sleep(3)
+          raise SystemExit("SQL Server never became reachable")
+          PY
+
+      - name: Cache the Synthea jar
+        uses: actions/cache@v4
+        with:
+          path: synthea/synthea-with-dependencies.jar
+          key: synthea-master-branch-latest-v1
+
+      - name: Download Synthea
+        run: |
+          mkdir -p synthea
+          if [ ! -f "$SYNTHEA_JAR" ]; then
+            curl -fsSL -o "$SYNTHEA_JAR" \
+              https://github.com/synthetichealth/synthea/releases/download/master-branch-latest/synthea-with-dependencies.jar
+          fi
+          ls -lh "$SYNTHEA_JAR"
+
+      - name: Generate a 100-patient FHIR extract
+        run: python fhir/synthea.py --population 100 --output data/synthea
+
+      - name: Build the warehouse
+        run: python db/build_warehouse.py --reset
+
+      - name: Data quality suite
+        run: python tests/dq/run_dq.py
+
+      - name: Prove the data quality suite can fail
+        # A gate that has never closed is a gate nobody has tested. This plants
+        # a check that must fail and asserts the runner exits non-zero.
+        run: |
+          mkdir -p /tmp/dq-selftest
+          cat > /tmp/dq-selftest/99_planted.sql <<'SQL'
+          -- @check: SELFTEST-CI
+          -- @severity: error
+          -- @description: Planted failure; the runner must exit non-zero.
+          SELECT TOP (1) 'planted' AS failure, encounter_id FROM dw.FactEncounter;
+          SQL
+          cp tests/dq/run_dq.py /tmp/dq-selftest/
+          if python /tmp/dq-selftest/run_dq.py; then
+            echo "the data quality gate did not close on a planted failure"
+            exit 1
+          fi
+          echo "gate closed as expected"
+
+      - name: Quarantine reconciliation
+        # Corrupt a known set of resources in eight distinct ways and demand the
+        # quarantine recover exactly that set — the same ground-truth discipline
+        # the CDM half applies to its edit checks.
+        run: |
+          python db/migrate.py --reset
+          python fhir/ingest.py --source data/synthea/fhir --inject-invalid 5
+          python - <<'PY'
+          import csv, sys
+          sys.path.insert(0, ".")
+          from db.connection import cursor
+          with open("data/injected_fhir_defects.csv", encoding="utf-8") as handle:
+              injected = list(csv.DictReader(handle))
+          with cursor() as cur:
+              cur.execute("SELECT COUNT_BIG(*) FROM stg.ingest_rejects")
+              quarantined = int(cur.fetchone()[0])
+          print(f"injected {len(injected)}  quarantined {quarantined}")
+          assert quarantined == len(injected), "the quarantine did not recover the manifest exactly"
+          classes = {row["defect_class"] for row in injected}
+          assert len(classes) == 8, f"expected 8 defect classes, got {sorted(classes)}"
+          PY
+
+      - name: Rebuild, measure, document, and test
+        run: |
+          python db/build_warehouse.py --reset
+          python analytics/measure_performance.py
+          python docs/build_docs.py
+          pytest tests/ -v
+
+      - name: Regenerate the documentation
+        # A `git diff --exit-code` here would be the obvious check and would be
+        # wrong: the committed documents are generated from a 10,000-patient
+        # build and CI runs 100, so the row counts and the engine version differ
+        # by design and the diff would fail on every run for no reason.
+        #
+        # The invariant that IS population-independent — every norm and dw column
+        # documented, every documented column real — is asserted by
+        # tests/test_docs.py in the step above. This step proves the generator
+        # still runs against the schema it just built, and keeps its output as an
+        # artefact so a reviewer can see what the docs would say.
+        run: python docs/build_docs.py
+
+      - name: Upload the regenerated documentation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-docs
+          path: |
+            docs/data-dictionary.md
+            docs/data-map.md
+            docs/erd.md
+            docs/performance.md
+            docs/performance_results.json
+            docs/plans/*.sqlplan
+          if-no-files-found: warn
+
+      - name: Upload metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-metrics
+          path: |
+            metrics.json
+            data/synthea/provenance.json
+          if-no-files-found: warn

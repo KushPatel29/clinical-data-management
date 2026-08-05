@@ -1,0 +1,7 @@
+# The CDM pipeline (crf/ dvs/ sdtm/ coding/ uat/ analytics/) needs none of this.
+# It is standard library only and a test enforces that. Everything below belongs
+# to the FHIR ingestion and SQL Server warehouse layer.
+httpx==0.27.0
+pydantic==2.13.4
+pyodbc==5.2.0
+pytest==9.1.1
