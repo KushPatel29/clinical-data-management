@@ -208,6 +208,13 @@ class DefectInjector:
 # ---------------------------------------------------------------------------
 
 _STAGE_DDL = """
+-- pyodbc pools physical SQL Server connections. A local temp table can
+-- therefore outlive the Python connection object that created it and still be
+-- present when the pool lends that session to the change-feed ingest. Make
+-- staging setup idempotent at the session boundary as well as at the row level.
+DROP TABLE IF EXISTS #incoming;
+DROP TABLE IF EXISTS #rejects;
+
 CREATE TABLE #incoming (
     resource_type VARCHAR(32)   NOT NULL,
     resource_id   VARCHAR(64)   NOT NULL,
