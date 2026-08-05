@@ -210,7 +210,8 @@ def test_medication_choice_is_exclusive(warehouse):
     """CK_medication_request_choice, verified."""
     both_or_neither = scalar(warehouse, """
         SELECT COUNT_BIG(*) FROM norm.medication_request
-        WHERE (code_concept_id IS NULL) = (medication_reference_id IS NULL)
+        WHERE (code_concept_id IS NULL AND medication_reference_id IS NULL)
+           OR (code_concept_id IS NOT NULL AND medication_reference_id IS NOT NULL)
     """)
     assert both_or_neither == 0
 

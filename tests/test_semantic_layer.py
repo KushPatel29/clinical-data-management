@@ -202,22 +202,29 @@ def test_median_and_mean_length_of_stay_both_exist(cur, measures):
 def test_distinct_patient_count_uses_the_business_key(cur, measures):
     """The Type 2 trap.
 
-    A patient who moved has two surrogate keys. Counting those counts them
-    twice. The measure counts patient_id; this asserts the difference is real
-    and in the direction that proves the trap is live in this data.
+    A patient who moved has two surrogate keys, but a surrogate-key distinct
+    count only over-counts once that patient has facts on both sides of the
+    change. The measure uses patient_id regardless; this verifies both possible
+    shapes of a deterministic sample without pretending every change must have
+    a later encounter.
     """
     by_business_key = measures["Patients Seen"]
     by_surrogate_key = measures["Patients Seen (surrogate key - WRONG)"]
     assert by_surrogate_key >= by_business_key
-    changed = scalar(cur, """
+    spanning = scalar(cur, """
         SELECT COUNT_BIG(*) FROM (
-            SELECT patient_id FROM dw.DimPatient WHERE patient_key <> -1
-            GROUP BY patient_id HAVING COUNT_BIG(*) > 1) AS x
+            SELECT p.patient_id
+            FROM dw.FactEncounter AS f
+            JOIN dw.DimPatient AS p ON p.patient_key = f.patient_key
+            WHERE f.patient_key <> -1
+            GROUP BY p.patient_id
+            HAVING COUNT_BIG(DISTINCT f.patient_key) > 1) AS x
     """)
-    if changed:
+    if spanning:
         assert by_surrogate_key > by_business_key, (
-            "patients have multiple versions but the surrogate-key count did not "
-            "over-count — the Type 2 join is not doing anything")
+            "patients span Type 2 versions but the surrogate-key count did not over-count")
+    else:
+        assert by_surrogate_key == by_business_key
 
 
 def test_active_panel_is_anchored_to_the_data_not_to_today(cur, measures):
@@ -264,7 +271,7 @@ def test_outlier_rate_is_plausible(cur, measures):
 
 def test_every_documented_measure_has_a_sql_equivalent():
     """A DAX measure with nothing to check it against is a claim."""
-    dax_names = set(re.findall(r"^([A-Z][A-Za-z0-9 %]+) =$",
+    dax_names = set(re.findall(r"^(?!VAR )([A-Z][A-Za-z0-9 %]+) =$",
                                MEASURES_MD.read_text(encoding="utf-8"),
                                re.MULTILINE))
     sql_text = VALIDATION_SQL.read_text(encoding="utf-8")

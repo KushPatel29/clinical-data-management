@@ -560,8 +560,10 @@ def build_performance(results: dict) -> str:
         else:
             lines.append("- The same operators, at different costs. Recorded as measured.")
         lines += ["",
-                  f"Plans: [`{before['plan']}`]({Path(before['plan']).name}) · "
-                  f"[`{after['plan']}`]({Path(after['plan']).name})"
+                  f"Plans: [`{before['plan']}`]"
+                  f"({Path(before['plan']).relative_to('docs').as_posix()}) · "
+                  f"[`{after['plan']}`]"
+                  f"({Path(after['plan']).relative_to('docs').as_posix()})"
                   if before["plan"] and after["plan"] else "",
                   ""]
 
