@@ -31,7 +31,7 @@ WITH expected AS (
            (SELECT COUNT_BIG(*) FROM raw.vw_current_resource WHERE resource_type = 'Patient') AS raw_rows,
            (SELECT COUNT_BIG(*) FROM norm.patient) AS norm_rows,
            (SELECT COUNT_BIG(*) FROM dw.DimPatient WHERE is_current = 1 AND patient_key <> -1) AS dw_rows,
-           CAST('equal' AS VARCHAR(20)) AS rule
+           CAST('equal' AS VARCHAR(20)) AS [rule]
     UNION ALL
     SELECT 'Encounter',
            (SELECT COUNT_BIG(*) FROM raw.vw_current_resource WHERE resource_type = 'Encounter'),
@@ -59,7 +59,7 @@ FROM expected WHERE raw_rows <> norm_rows
 
 UNION ALL
 SELECT layer_boundary, raw_rows, norm_rows, dw_rows, 'norm <> dw'
-FROM expected WHERE rule = 'equal' AND norm_rows <> dw_rows
+FROM expected WHERE [rule] = 'equal' AND norm_rows <> dw_rows
 
 UNION ALL
 -- Observation, checked against its exact expected identity rather than exempted.

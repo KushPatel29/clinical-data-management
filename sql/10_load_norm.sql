@@ -63,7 +63,29 @@ BEGIN
         MIN(display) because one code can arrive with two spellings of its
         display text in the same batch, and MERGE fails outright — not
         partially — if the source offers the same key twice.                  */
-    SELECT system_uri, code, MIN(display) AS display
+    /*  Synthea omits Encounter.class.display. Prefer source display text, then
+        fill the small HL7 v3 ActCode class value set so reporting labels do
+        not degrade to bare codes. Unknown class codes remain visible to TERM-01. */
+    SELECT system_uri, code,
+           COALESCE(
+               MIN(NULLIF(LTRIM(RTRIM(display)), '')),
+               CASE WHEN system_uri =
+                    'http://terminology.hl7.org/CodeSystem/v3-ActCode'
+                    THEN CASE code
+                        WHEN 'AMB'    THEN 'Ambulatory'
+                        WHEN 'EMER'   THEN 'Emergency'
+                        WHEN 'FLD'    THEN 'Field'
+                        WHEN 'HH'     THEN 'Home health'
+                        WHEN 'IMP'    THEN 'Inpatient encounter'
+                        WHEN 'ACUTE'  THEN 'Inpatient acute'
+                        WHEN 'NONAC'  THEN 'Inpatient non-acute'
+                        WHEN 'OBSENC' THEN 'Observation encounter'
+                        WHEN 'PRENC'  THEN 'Pre-admission'
+                        WHEN 'SS'     THEN 'Short stay'
+                        WHEN 'VR'     THEN 'Virtual'
+                    END
+               END
+           ) AS display
     INTO #codings
     FROM (
         -- Observation.code, Condition.code, Procedure.code, MedicationRequest.medication
@@ -583,7 +605,7 @@ BEGIN
             ref.patient_id,
             j.status,
             j.class_code,
-            j.class_display,
+            COALESCE(j.class_display, class_cc.display) AS class_display,
             j.period_start,
             j.period_end,
             ref.service_provider_id,
@@ -606,6 +628,11 @@ BEGIN
             WHERE v.system_uri = JSON_VALUE(r.payload, '$.type[0].coding[0].system')
               AND v.code       = JSON_VALUE(r.payload, '$.type[0].coding[0].code')
         ) AS cc
+        OUTER APPLY (
+            SELECT TOP (1) v.display FROM norm.vw_code AS v
+            WHERE v.system_uri = JSON_VALUE(r.payload, '$.class.system')
+              AND v.code       = j.class_code
+        ) AS class_cc
         WHERE r.resource_type = 'Encounter'
           /*  An encounter whose patient is not loaded is not dropped silently:
               it fails the FK, so it is filtered here and counted by the
