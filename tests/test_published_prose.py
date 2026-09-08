@@ -9,26 +9,25 @@ measurement.
 
 `test_performance_harness.py` catches an empty measurement where that can be
 caught - in the job that has a database, because only there is the results file
-this run's own output. This file catches the other direction: the README quotes
-six read counts and six elapsed times in its summary table, and every one of
-them is read back out of `docs/performance_results.json` and looked for in the
-document **as formatted**, thousands separators and all.
+this run's own output. This file guards the other direction: what the README is
+allowed to say about it.
 
-The two therefore need opposite guards, and getting that wrong is how this
-file failed its own first run in CI. The SQL Server job re-measures on a
-100-patient container immediately before calling pytest, so comparing the prose
-to the file there asserts that a 100-patient warehouse and the 1.34M-row one
-the README documents produce identical logical reads - which is not a property
-anything should have. The prose assertions are scoped to the jobs *without* a
-database, where the file is still the measurement the prose was written from;
-the two assertions about the generated document run everywhere, because
-`build_docs.py` writes that document from this file and regenerating one
-regenerates the other.
+The first version of this file asserted the README quoted all twelve figures,
+and CI rejected it twice for two different reasons, both correct. The repository
+already has a rule that any README figure above ten thousand must appear in
+metrics.json; these came from performance_results.json and were unverifiable by
+it. And the effect is scale-dependent - on the committed 1.34M-row run the
+covering index costs Q1 its parallelism and the query gets slower, while on
+CI's 100-patient container the plan never had parallelism to lose and it simply
+gets faster. Both measurements are real and neither generalises, so typing
+either into prose makes the other a lie.
 
-When a re-measurement legitimately moves a committed number, this fails and
-names the document that needs editing - which is the point. The alternative is
-what happened before: the numbers move, the document does not, and the build
-stays green.
+So the numbers live in the document the harness writes, beside the engine
+build, host and row counts that produced them, and the README carries the
+finding and the scale it holds at. What is asserted here is that arrangement:
+that no volatile figure has crept back into the prose, that the finding and its
+scale are both still stated, and that the generated document still agrees with
+the measurement it was generated from.
 """
 import json
 import re
@@ -102,36 +101,58 @@ def test_the_readme_is_the_real_one(prose):
     assert "## Performance" in prose
 
 
-def test_every_read_count_in_the_readme_is_the_recorded_one(committed_results, prose):
-    """Six numbers, one per query per side."""
-    for key, query in committed_results["queries"].items():
+def test_the_readme_quotes_no_figure_that_a_re_measurement_would_falsify(
+        committed_results, prose):
+    """The README used to carry the six read counts and six elapsed times.
+
+    It should not, for two reasons that only became visible once CI ran it. The
+    repository already has a gate saying any README figure above ten thousand
+    must appear in metrics.json - these came from performance_results.json, so
+    they were unverifiable by its own rule. And the effect itself is
+    scale-dependent: on the committed 1.34M-row run the covering index costs Q1
+    its parallelism and the query gets slower, while on CI's 100-patient
+    container the plan never had parallelism to lose and it simply gets faster.
+    Both are real. Typing either into prose makes the other a lie.
+    """
+    volatile = []
+    for query in committed_results["queries"].values():
         for side in ("before", "after"):
-            value = query[side]["logical_reads_total"]
-            assert quoted(prose, f"{value:,}"), (
-                f"{key}.{side} recorded {value:,} logical reads; the README "
-                "does not quote it")
+            for field in ("logical_reads_total", "elapsed_ms"):
+                value = query[side][field]
+                if value > 10_000 and quoted(prose, f"{value:,}"):
+                    volatile.append(f"{value:,}")
+    assert not volatile, (
+        "the README quotes measurements that a re-measurement on different "
+        f"hardware would falsify: {volatile}. They belong in the document the "
+        "harness writes, beside the environment that produced them.")
 
 
-def test_every_elapsed_time_in_the_readme_is_the_recorded_one(committed_results, prose):
-    for key, query in committed_results["queries"].items():
-        for side in ("before", "after"):
-            value = query[side]["elapsed_ms"]
-            assert quoted(prose, f"{value:,}"), (
-                f"{key}.{side} recorded {value:,} ms; the README does not "
-                "quote it")
+def test_the_readme_states_the_finding_and_the_scale_it_holds_at(prose):
+    """Removing the figures must not remove the point. The claim is that two of
+    the three results disagree with themselves, and that this depends on the
+    size of the warehouse - both have to survive."""
+    assert quoted(prose, "Two of the three disagree with themselves at scale")
+    assert quoted(prose, "1.34M observation rows")
+    assert quoted(prose, "The effect is scale-dependent")
+    assert quoted(prose, "100-patient container")
 
 
-def test_the_readme_states_the_direction_each_query_actually_moved(committed_results, prose):
-    """The summary table is an arrow per query. If a re-measurement ever flips
-    one of those arrows, the sentence explaining it is wrong and has to be
-    rewritten rather than left standing beside new numbers."""
-    q1, q3 = (committed_results["queries"]["Q1"],
-              committed_results["queries"]["Q3"])
-    # Q1: far fewer reads, and slower. Q3: reads flat, and much faster.
-    assert q1["after"]["logical_reads_total"] < q1["before"]["logical_reads_total"]
-    assert q1["after"]["elapsed_ms"] > q1["before"]["elapsed_ms"]
-    assert q3["after"]["elapsed_ms"] < q3["before"]["elapsed_ms"]
-    assert quoted(prose, "Two of these three disagree with themselves")
+def test_the_committed_run_still_shows_the_direction_the_prose_claims(
+        committed_results):
+    """The README says two of the three disagree with themselves. That is a
+    claim about the committed measurement, so it is checked against it: if a
+    re-measurement on the same hardware ever flips one of those arrows, the
+    sentence is wrong and has to be rewritten rather than left standing."""
+    q1 = committed_results["queries"]["Q1"]
+    q3 = committed_results["queries"]["Q3"]
+
+    assert q1["after"]["logical_reads_total"] < q1["before"]["logical_reads_total"], (
+        "Q1 no longer reads fewer pages; the prose about the covering index "
+        "is stale")
+    assert q1["after"]["elapsed_ms"] > q1["before"]["elapsed_ms"], (
+        "Q1 is no longer slower; the DOP explanation no longer applies")
+    assert q3["after"]["elapsed_ms"] < q3["before"]["elapsed_ms"], (
+        "Q3 is no longer faster; the iTVF rewrite explanation is stale")
 
 
 def test_the_generated_document_agrees_with_the_recorded_measurement(results):

@@ -442,20 +442,30 @@ Three queries, each with exactly one change, measured before and after with
 **logical reads as the headline number rather than elapsed time** — elapsed time
 on a workstation moves with whatever else the machine is doing.
 
-| | Query | Change | Logical reads | Elapsed |
-|---|---|---|---:|---:|
-| Q1 | One observation code over a date range — a dashboard tile | covering nonclustered index | 52,237 → 7,623 | 201 → 801 ms |
-| Q2 | Every code by fiscal quarter — a Power BI import refresh | nonclustered columnstore index | 8,233 → 1,454 | 179 → 100 ms |
-| Q3 | Reference resolution across the whole raw table — the load itself | a rewrite, not an index | 353,606 → 361,489 | 101,980 → 20,025 ms |
+| | Query | Change |
+|---|---|---|
+| Q1 | One observation code over a date range — a dashboard tile | covering nonclustered index |
+| Q2 | Every code by fiscal quarter — a Power BI import refresh | nonclustered columnstore index |
+| Q3 | Reference resolution across the whole raw table — the load itself | a rewrite, not an index |
 
-**Two of these three disagree with themselves, and that is the point of
-measuring both.** Q1 reads 85% fewer pages and takes four times as long: the
-covering index made the query cheap enough that the optimiser stopped
-parallelising it, so it went from DOP 11 to DOP 1. Q3 is the mirror image —
-the rewrite moved reads by 2% and cut elapsed time by 80%, because replacing a
-scalar UDF with an inline table-valued function let the plan go parallel at
-all. A tuning exercise that reported only one of these two numbers would have
-called Q1 a success and Q3 a failure, and been wrong both times.
+**Two of the three disagree with themselves at scale, and that is the point of
+measuring both.** On the committed run — the native build at 1.34M observation
+rows — Q1 reads an order of magnitude fewer pages and takes several times as
+long: the covering index makes the query cheap enough that the optimiser stops
+parallelising it, and it drops from DOP 11 to DOP 1. Q3 is the mirror image;
+the rewrite barely moves logical reads and cuts elapsed time by most of it,
+because replacing a scalar UDF with an inline table-valued function is what
+lets the plan go parallel at all. A tuning exercise reporting only one of those
+two numbers would have called Q1 a success and Q3 a failure, and been wrong
+both times.
+
+**The effect is scale-dependent, which is why no figure is typed here.** CI
+re-measures the same three queries on a 100-patient container, and at that size
+Q1 simply gets faster — the plan never had parallelism to lose. Both runs are
+real; neither generalises to the other. The numbers therefore live only in the
+document the harness writes, next to the engine build, host and row counts that
+produced them, rather than being copied into prose where they would be one
+re-measurement away from being false.
 
 Full write-up, per-table read counts, plan-operator diffs and the `.sqlplan`
 files: [`docs/performance.md`](docs/performance.md). Every index in the
