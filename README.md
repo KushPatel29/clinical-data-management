@@ -5,7 +5,7 @@
 ![CDISC](https://img.shields.io/badge/CDISC-CDASH%20%2B%20SDTM-0B5FA5)
 ![HL7 FHIR](https://img.shields.io/badge/HL7%20FHIR-R4-E4002B)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927)
-![Tests](https://img.shields.io/badge/tests-247%20passing-3B8C6E)
+![Tests](https://img.shields.io/badge/tests-255%20passing-3B8C6E)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 Two halves of the same problem, in one repository.
@@ -609,7 +609,7 @@ sql/              00 database · 01 raw · 02 quarantine · 03 terminology · 04
 analytics/        make_dashboard.py · make_warehouse_board.py · measure_performance.py
 docs/             architecture · data-dictionary · data-map · erd · performance · plans/
 powerbi/          measures.md (documented DAX) · validation.sql (its cross-check)
-tests/            247 invariants, including tests/dq/ — eleven runnable T-SQL checks
+tests/            255 invariants, including tests/dq/ — eleven runnable T-SQL checks
 ```
 
 ## Limitations

@@ -369,7 +369,10 @@ class ConditionModel(FhirResource):
     resource_type_name: ClassVar[str] = "Condition"
 
     subject: Reference                # 1..1
-    code: CodeableConcept | None = None
+    # validate_default: pydantic skips validators on a field that was never
+    # supplied, so an omitted code sailed past the check below while an
+    # explicit null was caught. Both end at the same NOT NULL column.
+    code: CodeableConcept | None = Field(default=None, validate_default=True)
     encounter: Reference | None = None
     clinicalStatus: CodeableConcept | None = None
     verificationStatus: CodeableConcept | None = None
@@ -478,7 +481,10 @@ class ProcedureModel(FhirResource):
 
     status: str                       # 1..1
     subject: Reference                # 1..1
-    code: CodeableConcept | None = None
+    # validate_default: pydantic skips validators on a field that was never
+    # supplied, so an omitted code sailed past the check below while an
+    # explicit null was caught. Both end at the same NOT NULL column.
+    code: CodeableConcept | None = Field(default=None, validate_default=True)
     encounter: Reference | None = None
     performedDateTime: datetime | None = None
     performedPeriod: Period | None = None
