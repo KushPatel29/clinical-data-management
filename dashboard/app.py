@@ -252,7 +252,7 @@ st.markdown(
       <div class="rail-step"><div class="rail-label">04 · Standardize</div>
         <div class="rail-value">0 SDTM findings</div></div>
       <div class="rail-step"><div class="rail-label">05 · Scale</div>
-        <div class="rail-value">{metrics['full_generation']['resources_generated']/1_000_000:.2f}M FHIR</div></div>
+        <div class="rail-value">{(metrics.get('full_generation') or metrics['source'])['resources_generated']/1_000_000:.2f}M FHIR</div></div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -619,13 +619,25 @@ with tab_safety:
 with tab_fhir:
     st.markdown('<div class="section-kicker">FHIR R4 to dimensional analytics</div>', unsafe_allow_html=True)
     st.subheader("Scale proof and warehouse behavior")
-    full = metrics["full_generation"]
+    # `full_generation` and `live_rest` are *retained* blocks: build_warehouse.py
+    # carries them forward from a previous metrics.json and writes None when
+    # there is nothing to carry. A fresh clone rebuilt at any population below
+    # 10,000 therefore produces None here, and indexing it killed the whole app
+    # with "'NoneType' object is not subscriptable" — on the public surface, not
+    # in a test. Falling back to the build actually described by metrics.json is
+    # both crash-proof and more honest: the tile then reports the run in front of
+    # you rather than one somebody else did.
+    full = metrics.get("full_generation") or metrics["source"]
     ingest = metrics["ingest"]
     quality = metrics["quality"]
+    generation_label = (
+        "metrics.json · full-generation run" if metrics.get("full_generation")
+        else "metrics.json · this build"
+    )
     claims(
         [
             (fmt_int(full["population"]), "synthetic FHIR patients generated", "Synthea · deterministic seed 20260806"),
-            (fmt_int(full["resources_generated"]), "FHIR resources generated", "metrics.json · full-generation run"),
+            (fmt_int(full["resources_generated"]), "FHIR resources generated", generation_label),
             (f"{metrics['total_seconds']:.2f} s", "local warehouse benchmark", f"{ingest['initial_read']:,} source resources · SQL Server 16"),
             (fmt_int(metrics["row_counts"]["dw.FactObservation"]), "fact observations loaded", "local benchmark warehouse"),
         ]
@@ -690,9 +702,10 @@ with tab_fhir:
     plot(style_figure(fig, "Rows across raw, normalized, and dimensional layers", 500))
 
     st.markdown("#### Public FHIR endpoint quality snapshot")
+    live_rest = metrics.get("live_rest")
     pulls = []
     reasons = []
-    for resource_type, result in metrics["live_rest"]["pulls"].items():
+    for resource_type, result in ((live_rest or {}).get("pulls") or {}).items():
         pulls.append(
             {
                 "resource_type": resource_type,
@@ -702,39 +715,61 @@ with tab_fhir:
         )
         for reason, count in result.get("reasons", {}).items():
             reasons.append({"resource_type": resource_type, "reason": reason, "records": count})
-    pulls_df = pd.DataFrame(pulls).melt(
-        id_vars="resource_type", var_name="disposition", value_name="records"
-    )
-    left, right = st.columns([1.1, 1])
-    with left:
-        fig = px.bar(
-            pulls_df,
-            x="resource_type",
-            y="records",
-            color="disposition",
-            barmode="stack",
-            text_auto=True,
-            color_discrete_map={"accepted": TEAL, "rejected": CRIMSON},
-            labels={"resource_type": "FHIR resource", "records": "Resources", "disposition": "Disposition"},
+    # An absent `live_rest` block leaves `pulls` empty, and `.melt(id_vars=...)`
+    # on an empty DataFrame raises on the missing column rather than returning
+    # nothing. Charting is skipped rather than defended column by column: a panel
+    # with no data should say so, not render three empty axes.
+    if pulls:
+        pulls_df = pd.DataFrame(pulls).melt(
+            id_vars="resource_type", var_name="disposition", value_name="records"
         )
-        plot(style_figure(fig, "Read-only public REST pull disposition"))
-    with right:
-        reason_df = pd.DataFrame(reasons)
-        fig = px.bar(
-            reason_df,
-            x="records",
-            y="reason",
-            orientation="h",
-            color="resource_type",
-            text_auto=True,
-            labels={"records": "Rejected resources", "reason": "Validation reason", "resource_type": "Resource"},
-            color_discrete_map={"Observation": AMBER, "Encounter": CRIMSON},
+        left, right = st.columns([1.1, 1])
+        with left:
+            fig = px.bar(
+                pulls_df,
+                x="resource_type",
+                y="records",
+                color="disposition",
+                barmode="stack",
+                text_auto=True,
+                color_discrete_map={"accepted": TEAL, "rejected": CRIMSON},
+                labels={"resource_type": "FHIR resource", "records": "Resources",
+                        "disposition": "Disposition"},
+            )
+            plot(style_figure(fig, "Read-only public REST pull disposition"))
+        with right:
+            if reasons:
+                reason_df = pd.DataFrame(reasons)
+                fig = px.bar(
+                    reason_df,
+                    x="records",
+                    y="reason",
+                    orientation="h",
+                    color="resource_type",
+                    text_auto=True,
+                    labels={"records": "Rejected resources", "reason": "Validation reason",
+                            "resource_type": "Resource"},
+                    color_discrete_map={"Observation": AMBER, "Encounter": CRIMSON},
+                )
+                plot(style_figure(fig, "Why resources were quarantined"))
+            else:
+                st.info("No resources were rejected in the recorded pull.")
+    else:
+        st.info(
+            "No live FHIR pull is recorded in this build. Everything else on this "
+            "tab comes from the local warehouse and is unaffected."
         )
-        plot(style_figure(fig, "Why resources were quarantined"))
-    st.caption(
-        f"Observed {metrics['live_rest']['observed_on']} against {metrics['live_rest']['server']}; "
-        f"writes performed: {metrics['live_rest']['writes_performed']}. Public test-server content changes over time."
-    )
+    if live_rest:
+        st.caption(
+            f"Observed {live_rest['observed_on']} against {live_rest['server']}; "
+            f"writes performed: {live_rest['writes_performed']}. "
+            "Public test-server content changes over time."
+        )
+    else:
+        st.caption(
+            "No live FHIR pull is recorded in this build's metrics.json. "
+            "Run `python fhir/ingest.py --rest` to capture one."
+        )
 
     st.markdown("#### Measured query-plan changes")
     perf_rows = []

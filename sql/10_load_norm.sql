@@ -732,7 +732,9 @@ BEGIN
             enc.resource_id AS encounter_id,
             primary_code.code_concept_id,
             j.category_code, j.status, j.effective_datetime, j.issued,
-            j.value_quantity, j.value_unit, j.value_string,
+            CAST(j.value_quantity AS DECIMAL(18,6)) AS value_quantity,
+            COALESCE(j.value_unit, j.value_unit_code) AS value_unit,
+            j.value_string,
             value_code.code_concept_id AS value_code_concept_id,
             CASE WHEN JSON_QUERY(r.payload, '$.component') IS NULL THEN 0 ELSE 1 END AS has_components
         FROM raw.fhir_resource AS r
@@ -746,8 +748,29 @@ BEGIN
             status             VARCHAR(20)   '$.status',
             effective_datetime DATETIME2(3)  '$.effectiveDateTime',
             issued             DATETIME2(3)  '$.issued',
-            value_quantity     DECIMAL(18,6) '$.valueQuantity.value',
+            /*  FLOAT, then cast — not DECIMAL directly.
+
+                One observation in 925,283 carries "1.2607e-06". T-SQL cannot
+                convert scientific notation straight to DECIMAL; it raises
+                "Error converting data type nvarchar to decimal" and takes the
+                whole statement with it. That one row killed a fifteen-minute
+                shred, which is the shape of failure only volume finds: 20
+                patients never produced it, and 10,000 did.
+
+                FLOAT parses the exponent, and the cast to the column's own
+                DECIMAL(18,6) happens afterwards. Values below that scale round
+                to zero rather than crash, and DQ check DOM-02 reports every one
+                of them — a number that quietly became zero is worth seeing,
+                which is the whole difference between this and TRY_CAST.        */
+            value_quantity     FLOAT         '$.valueQuantity.value',
+            /*  FHIR splits the unit in two: Quantity.unit is the display
+                form, Quantity.code is the coded (UCUM) form. Either one
+                makes the number interpretable, and reading only `unit`
+                discards the coded case — which then fails
+                CK_observation_quantity_has_unit on a resource that is
+                perfectly well formed.                                   */
             value_unit         NVARCHAR(40)  '$.valueQuantity.unit',
+            value_unit_code    NVARCHAR(40)  '$.valueQuantity.code',
             value_string       NVARCHAR(400) '$.valueString'
         ) AS j
         CROSS APPLY (
@@ -793,8 +816,14 @@ BEGIN
             r.resource_id AS observation_id,
             CAST(comp.[key] AS SMALLINT) + 1 AS component_seq,
             cc.code_concept_id,
-            TRY_CAST(JSON_VALUE(comp.value, '$.valueQuantity.value') AS DECIMAL(18,6)) AS value_quantity,
-            JSON_VALUE(comp.value, '$.valueQuantity.unit') AS value_unit,
+            /*  Same exponent problem as the parent, with the opposite and
+                worse failure: TRY_CAST does not raise on "1.2607e-06", it
+                returns NULL, and the result vanishes without a word. Through
+                FLOAT it parses.                                             */
+            CAST(TRY_CAST(JSON_VALUE(comp.value, '$.valueQuantity.value') AS FLOAT)
+                 AS DECIMAL(18,6)) AS value_quantity,
+            COALESCE(JSON_VALUE(comp.value, '$.valueQuantity.unit'),
+                     JSON_VALUE(comp.value, '$.valueQuantity.code')) AS value_unit,
             vc.code_concept_id AS value_code_concept_id
         FROM raw.fhir_resource AS r
         JOIN raw.current_version AS cv

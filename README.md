@@ -5,7 +5,7 @@
 ![CDISC](https://img.shields.io/badge/CDISC-CDASH%20%2B%20SDTM-0B5FA5)
 ![HL7 FHIR](https://img.shields.io/badge/HL7%20FHIR-R4-E4002B)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927)
-![Tests](https://img.shields.io/badge/tests-224%20passing-3B8C6E)
+![Tests](https://img.shields.io/badge/tests-247%20passing-3B8C6E)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 Two halves of the same problem, in one repository.
@@ -89,7 +89,7 @@ That second manifest earned its keep on the first run: **24 resources corrupted,
 
 ![Data management status board](docs/dm_status_board.png)
 
-![Clinical warehouse status board](docs/warehouse_board.png)
+![Clinical warehouse status board](docs/warehouse_board.svg)
 
 *Both boards are hand-drawn SVG from the standard library — an AST test walks
 each module and fails on any third-party import, because a chart is not a good
@@ -233,7 +233,11 @@ flowchart LR
 FHIR R4 resources** across the eight types this warehouse models. The generation
 command and configuration are committed
 ([`synthea/synthea.properties`](synthea/synthea.properties),
-[`fhir/synthea.py`](fhir/synthea.py)); the 5.8 GB of JSON it produces is not.
+[`fhir/synthea.py`](fhir/synthea.py)); the JSON they produce is not — **5.8 GB
+across every resource type Synthea emits, of which the eight modelled here are
+1.67 GB.** Claim and ExplanationOfBenefit alone are over half the bytes and
+neither is clinical data, so they are filtered out at the file level rather than
+read and discarded.
 Every run writes a provenance file recording the jar's SHA-256. The retained
 `full_generation` object in [`metrics.json`](metrics.json) records the 10,000-
 patient run even when CI subsequently rebuilds its smaller sample.
@@ -386,7 +390,7 @@ the provider, and asserts the surrogate key did not change.
 
 ### Data quality ([`tests/dq/`](tests/dq/))
 
-Ten checks as plain `.sql` files a DBA can paste into Management Studio.
+Eleven checks as plain `.sql` files a DBA can paste into Management Studio.
 **Zero rows is a pass** — a check returns the rows that are wrong, not a boolean,
 because "REC-01 FAILED" gets muted and "these four encounters lost their
 organisation, here are their ids" gets fixed.
@@ -402,6 +406,7 @@ organisation, here are their ids" gets fixed.
 | `DOM-01` | Clinical rules a constraint cannot express: a result dated before the patient's birth, a negative length of stay, a readmission flag that disagrees with the interval it came from. |
 | `TERM-01` | A code resolved against the wrong vocabulary. |
 | `QUAR-01` | Every reject has a reason and a payload; every batch balances. |
+| `DOM-02` | Numeric results that lost significance landing in `DECIMAL(18,6)`. The only **warn** check: one row in this extract legitimately underflows, so it reports rather than blocks — what matters is the count moving. |
 
 The suite runs standalone (`python tests/dq/run_dq.py`, non-zero exit on
 failure) and as pytest cases. CI plants a check that must fail and asserts the
@@ -437,11 +442,20 @@ Three queries, each with exactly one change, measured before and after with
 **logical reads as the headline number rather than elapsed time** — elapsed time
 on a workstation moves with whatever else the machine is doing.
 
-| | Query | Change |
-|---|---|---|
-| Q1 | One observation code over a date range — a dashboard tile | covering nonclustered index |
-| Q2 | Every code by fiscal quarter — a Power BI import refresh | nonclustered columnstore index |
-| Q3 | Reference resolution across the whole raw table — the load itself | a rewrite, not an index |
+| | Query | Change | Logical reads | Elapsed |
+|---|---|---|---:|---:|
+| Q1 | One observation code over a date range — a dashboard tile | covering nonclustered index | 52,237 → 7,623 | 201 → 801 ms |
+| Q2 | Every code by fiscal quarter — a Power BI import refresh | nonclustered columnstore index | 8,233 → 1,454 | 179 → 100 ms |
+| Q3 | Reference resolution across the whole raw table — the load itself | a rewrite, not an index | 353,606 → 361,489 | 101,980 → 20,025 ms |
+
+**Two of these three disagree with themselves, and that is the point of
+measuring both.** Q1 reads 85% fewer pages and takes four times as long: the
+covering index made the query cheap enough that the optimiser stopped
+parallelising it, so it went from DOP 11 to DOP 1. Q3 is the mirror image —
+the rewrite moved reads by 2% and cut elapsed time by 80%, because replacing a
+scalar UDF with an inline table-valued function let the plan go parallel at
+all. A tuning exercise that reported only one of these two numbers would have
+called Q1 a success and Q3 a failure, and been wrong both times.
 
 Full write-up, per-table read counts, plan-operator diffs and the `.sqlplan`
 files: [`docs/performance.md`](docs/performance.md). Every index in the
@@ -585,7 +599,7 @@ sql/              00 database · 01 raw · 02 quarantine · 03 terminology · 04
 analytics/        make_dashboard.py · make_warehouse_board.py · measure_performance.py
 docs/             architecture · data-dictionary · data-map · erd · performance · plans/
 powerbi/          measures.md (documented DAX) · validation.sql (its cross-check)
-tests/            224 invariants, including tests/dq/ — ten runnable T-SQL checks
+tests/            247 invariants, including tests/dq/ — eleven runnable T-SQL checks
 ```
 
 ## Limitations
@@ -632,9 +646,13 @@ brochure.
   specification with a SQL cross-check for every measure, not a `.pbix`.
 - **Two execution environments.** The local build uses SQL Server 2022 Developer
   Edition installed natively; CI uses
-  `mcr.microsoft.com/mssql/server:2022-latest`. `metrics.json` labels the native
-  build and the committed performance document labels the CI measurement, so a
-  number is never presented without the environment that produced it.
+  `mcr.microsoft.com/mssql/server:2022-latest`. Both `metrics.json` and the
+  committed performance document name the engine build, the host and the fact
+  table row counts they were produced on, so a number is never presented
+  without the environment that produced it. The committed measurement is the
+  native build at 1.34M observation rows; CI re-measures on its own container
+  at a smaller sample every run, and a test fails if that measurement comes
+  back empty.
 
 ## Honest positioning
 

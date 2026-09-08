@@ -125,6 +125,39 @@ def test_observation_requires_its_1_1_elements(element):
     assert element in str(caught.value)
 
 
+def test_quantity_without_a_unit_is_rejected():
+    """A measured number with no unit is not interpretable.
+
+    FHIR permits it — neither Quantity.unit nor Quantity.code is required — so
+    this is a stated warehouse policy, not a spec reading. Five observations in
+    a 925,283-resource extract take this shape, and before the rule existed they
+    reached the database and failed CK_observation_quantity_has_unit five
+    hundred seconds into the shred, taking the whole load with them.
+    """
+    with pytest.raises(FhirValidationError) as caught:
+        validate_resource(observation(valueQuantity={"value": 21.998,
+                                                     "system": "http://unitsofmeasure.org"}))
+    assert "neither unit nor code" in str(caught.value)
+
+
+def test_quantity_with_only_a_ucum_code_is_accepted():
+    """Quantity.code is the coded form of the unit and Quantity.unit the display
+    form. Either makes the number interpretable; requiring the display form
+    would reject conforming resources."""
+    model = validate_resource(observation(valueQuantity={"value": 5.0, "code": "mg",
+                                                         "system": "http://unitsofmeasure.org"}))
+    assert model.valueQuantity.code == "mg"
+
+
+def test_component_quantity_without_a_unit_is_rejected():
+    with pytest.raises(FhirValidationError) as caught:
+        validate_resource(observation(component=[{
+            "code": {"coding": [{"system": "http://loinc.org", "code": "8480-6"}]},
+            "valueQuantity": {"value": 120},
+        }]))
+    assert "neither unit nor code" in str(caught.value)
+
+
 def test_observation_effective_datetime_is_optional():
     """0..1 in R4. A model that requires it rejects valid resources — the
     failure mode nobody notices, because it looks like strictness."""

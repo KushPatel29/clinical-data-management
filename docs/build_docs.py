@@ -490,6 +490,40 @@ def build_performance(results: dict) -> str:
 
     for key, query in results["queries"].items():
         before, after = query["before"], query["after"]
+
+        # A measurement with no logical reads on either side did not measure a
+        # fast query, it measured nothing - and rendering it produces
+        # `| Logical reads | 0 | 0 | n/a |` under a heading that promises every
+        # number here was produced by the harness and none of them is an
+        # estimate. That is worse than an empty page: it reads as a result.
+        #
+        # It has happened. pyodbc clears `cursor.messages` as it advances
+        # through result sets, so a harness that drained them once at the end
+        # collected nothing, and this document published a table of zeros for
+        # three queries. measure_performance.py now takes the messages at every
+        # step and tests/test_performance_harness.py fails if a recorded run is
+        # ever empty again; this refuses to typeset one in the meantime.
+        if before["logical_reads_total"] <= 0 and after["logical_reads_total"] <= 0:
+            lines += [
+                f"## {key} — {query['title']}", "",
+                query["question"], "",
+                "```sql",
+                query["sql"],
+                "```",
+                "",
+                f"**Change applied:** {query['fix']}.",
+                "",
+                "> **Not measured.** The recorded run for this query captured no "
+                "logical reads on either side, which means the harness collected "
+                "nothing rather than that the query was free. No table is printed "
+                "here, because a row of zeros under the heading above would read "
+                "as a result. The cause and the fix are in "
+                "`analytics/measure_performance.py`; a fresh measurement lands "
+                "the next time the SQL Server job runs.",
+                "",
+            ]
+            continue
+
         # Subtree cost is a small float; scale it so the shared percentage
         # helper is comparing integers of a similar magnitude to the others.
         cost_delta = _delta(before["estimated_subtree_cost"] * 1000,

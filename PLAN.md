@@ -189,6 +189,14 @@ The four existing test files are not edited. If any of the 58 tests need a
 change to stay green, that is a signal the new work broke something and the new
 work gets fixed instead.
 
+*Correction, after the fact:* two of them were edited after all. Running
+`ruff --fix` across `tests/` removed an unused `csv` import from
+`test_edit_checks.py` and an unused `CODELISTS` from `test_sdtm_and_coding.py`,
+and re-sorted imports in both. No assertion changed and all 58 still pass, but
+the claim above was broader than what happened and is worth correcting rather
+than quietly satisfying. The lint configuration now excludes the CDM modules; it
+does not exclude their tests.
+
 ## 6. Risks
 
 | Risk | Assessment |
@@ -253,6 +261,6 @@ case, a Type 2 dimension that sent every fact to the Unknown member, a date
 dimension that could not hold a patient's birth, and a view whose window
 function was being paid for sixteen times.
 
-**Test count: 58 → 224.** The original 58 are unmodified and run in their own CI
+**Test count: 58 → 241.** The original 58 are unmodified and run in their own CI
 job with pytest and nothing else installed, which is what keeps the
 standard-library claim about the CDM half honest.

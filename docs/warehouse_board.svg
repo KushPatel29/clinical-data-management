@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="700" viewBox="0 0 1180 700">
+<rect width="1180" height="700" fill="#F6F8FA"/>
+<text x="34" y="44" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="21" fill="#12233A" font-weight="700" text-anchor="start">Clinical Warehouse — FHIR R4 to SQL Server</text>
+<text x="34" y="68" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="12.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Synthetic Synthea extract · raw JSON to 3NF to Kimball star · every figure read from the load that produced it</text>
+<rect x="34" y="90" width="272" height="96" rx="10" fill="#FFFFFF" stroke="#DFE5EC"/>
+<text x="52" y="140" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="28" fill="#12436D" font-weight="700" text-anchor="start">1,665,082</text>
+<text x="52" y="164" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">FHIR resources landed in raw</text>
+<rect x="324" y="90" width="272" height="96" rx="10" fill="#FFFFFF" stroke="#DFE5EC"/>
+<text x="342" y="140" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="28" fill="#28A197" font-weight="700" text-anchor="start">2,070,028</text>
+<text x="342" y="164" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">fact rows across five fact tables</text>
+<rect x="614" y="90" width="272" height="96" rx="10" fill="#FFFFFF" stroke="#DFE5EC"/>
+<text x="632" y="140" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="28" fill="#F46A25" font-weight="700" text-anchor="start">5</text>
+<text x="632" y="164" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">quarantined, each with a reason</text>
+<rect x="904" y="90" width="272" height="96" rx="10" fill="#FFFFFF" stroke="#DFE5EC"/>
+<text x="922" y="140" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="28" fill="#12436D" font-weight="700" text-anchor="start">1,429</text>
+<text x="922" y="164" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">patients with a Type 2 version history</text>
+<rect x="34" y="208" width="560" height="224" rx="10" fill="#FFFFFF" stroke="#DFE5EC"/>
+<text x="52" y="236" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="13" fill="#12233A" font-weight="600" text-anchor="start">Row counts: norm to dw</text>
+<text x="52" y="254" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#6B7A8C" font-weight="400" text-anchor="start">navy = norm (3NF)   ·   teal = dw (dimensional)</text>
+<text x="52" y="271.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Patient</text>
+<rect x="162" y="260.0" width="2.3959634712302083" height="7.5" rx="3" fill="#12436D"/>
+<rect x="162" y="270.5" width="2.738586247616128" height="7.5" rx="3" fill="#28A197"/>
+<text x="171.73858624761613" y="271.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#12233A" font-weight="600" text-anchor="start">10,000 / 11,430</text>
+<text x="52" y="296.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Encounter</text>
+<rect x="162" y="285.0" width="40.70885695428397" height="7.5" rx="3" fill="#12436D"/>
+<rect x="162" y="295.5" width="40.70885695428397" height="7.5" rx="3" fill="#28A197"/>
+<text x="209.708856954284" y="296.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#12233A" font-weight="600" text-anchor="start">169,906</text>
+<text x="52" y="321.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Condition</text>
+<rect x="162" y="310.0" width="33.48406870313641" height="7.5" rx="3" fill="#12436D"/>
+<rect x="162" y="320.5" width="33.48406870313641" height="7.5" rx="3" fill="#28A197"/>
+<text x="202.48406870313642" y="321.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#12233A" font-weight="600" text-anchor="start">139,752</text>
+<text x="52" y="346.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Observation</text>
+<rect x="162" y="335.0" width="221.69322887329446" height="7.5" rx="3" fill="#12436D"/>
+<rect x="162" y="345.5" width="322.0" height="7.5" rx="3" fill="#28A197"/>
+<text x="491.0" y="346.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#12233A" font-weight="600" text-anchor="start">925,278 / 1,343,927</text>
+<text x="52" y="371.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Procedure</text>
+<rect x="162" y="360.0" width="74.36064310040649" height="7.5" rx="3" fill="#12436D"/>
+<rect x="162" y="370.5" width="74.36064310040649" height="7.5" rx="3" fill="#28A197"/>
+<text x="243.3606431004065" y="371.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#12233A" font-weight="600" text-anchor="start">310,358</text>
+<text x="52" y="396.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Medication</text>
+<rect x="162" y="385.0" width="25.417578484545665" height="7.5" rx="3" fill="#12436D"/>
+<rect x="162" y="395.5" width="25.417578484545665" height="7.5" rx="3" fill="#28A197"/>
+<text x="194.41757848454566" y="396.5" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#12233A" font-weight="600" text-anchor="start">106,085</text>
+<rect x="614" y="208" width="532" height="224" rx="10" fill="#FFFFFF" stroke="#DFE5EC"/>
+<text x="632" y="236" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="13" fill="#12233A" font-weight="600" text-anchor="start">Encounters by care setting</text>
+<text x="632" y="254" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#6B7A8C" font-weight="400" text-anchor="start">derived once in DimEncounterType, not per query</text>
+<text x="632" y="276.976" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Ambulatory</text>
+<rect x="756" y="262.0" width="296.0" height="20.8" rx="3" fill="#28A197"/>
+<text x="1059.0" y="276.976" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">158,060</text>
+<text x="632" y="305.776" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Emergency</text>
+<rect x="756" y="290.8" width="12.337390864228773" height="20.8" rx="3" fill="#F46A25"/>
+<text x="775.3373908642287" y="305.776" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">6,588</text>
+<text x="632" y="334.576" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Inpatient</text>
+<rect x="756" y="319.6" width="7.258610654181957" height="20.8" rx="3" fill="#12436D"/>
+<text x="770.258610654182" y="334.576" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">3,876</text>
+<text x="632" y="363.376" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Home</text>
+<rect x="756" y="348.4" width="1.7397444008604328" height="20.8" rx="3" fill="#7FB3D5"/>
+<text x="764.7397444008604" y="363.376" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">929</text>
+<text x="632" y="392.176" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Virtual</text>
+<rect x="756" y="377.2" width="0.8483360749082627" height="20.8" rx="3" fill="#E8A33D"/>
+<text x="763.8483360749083" y="392.176" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">453</text>
+<rect x="34" y="452" width="560" height="216" rx="10" fill="#FFFFFF" stroke="#DFE5EC"/>
+<text x="52" y="480" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="13" fill="#12233A" font-weight="600" text-anchor="start">Load stages, seconds</text>
+<text x="52" y="498" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#6B7A8C" font-weight="400" text-anchor="start">measured by db/build_warehouse.py on the run that produced this board</text>
+<text x="52" y="514.4342857142857" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">schema</text>
+<rect x="202" y="506.0" width="0.14408789852574078" height="11.714285714285715" rx="3" fill="#12436D"/>
+<text x="209.14408789852575" y="514.4342857142857" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">4.7s</text>
+<text x="52" y="534.1485714285714" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">ingest</text>
+<rect x="202" y="525.7142857142857" width="18.767525917827054" height="11.714285714285715" rx="3" fill="#28A197"/>
+<text x="227.76752591782704" y="534.1485714285714" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">608.3s</text>
+<text x="52" y="553.8628571428571" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">shred raw -&gt; norm</text>
+<rect x="202" y="545.4285714285714" width="50.5480094549724" height="11.714285714285715" rx="3" fill="#F46A25"/>
+<text x="259.54800945497243" y="553.8628571428571" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">1638.3s</text>
+<text x="52" y="573.5771428571428" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">load norm -&gt; dw</text>
+<rect x="202" y="565.1428571428571" width="298.0" height="11.714285714285715" rx="3" fill="#E8A33D"/>
+<text x="507.0" y="573.5771428571428" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">9658.4s</text>
+<text x="52" y="593.2914285714286" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">change feed</text>
+<rect x="202" y="584.8571428571429" width="0.03887596405619559" height="11.714285714285715" rx="3" fill="#12436D"/>
+<text x="209.0388759640562" y="593.2914285714286" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">1.3s</text>
+<text x="52" y="613.0057142857142" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">ingest (delta)</text>
+<rect x="202" y="604.5714285714286" width="0.05090900054977993" height="11.714285714285715" rx="3" fill="#28A197"/>
+<text x="209.05090900054978" y="613.0057142857142" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">1.6s</text>
+<text x="52" y="632.72" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">re-shred and re-load (SCD2)</text>
+<rect x="202" y="624.2857142857143" width="79.1678154064696" height="11.714285714285715" rx="3" fill="#F46A25"/>
+<text x="288.1678154064696" y="632.72" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">2565.9s</text>
+<rect x="614" y="452" width="532" height="216" rx="10" fill="#FFFFFF" stroke="#DFE5EC"/>
+<text x="632" y="480" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="13" fill="#12233A" font-weight="600" text-anchor="start">Trial feasibility screen</text>
+<text x="632" y="498" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#6B7A8C" font-weight="400" text-anchor="start">how many warehouse patients could be eligible for study SYN-2026-01</text>
+<text x="632" y="520.112" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Active patient panel</text>
+<rect x="842" y="506.0" width="185.57115908614546" height="19.6" rx="3" fill="#12436D"/>
+<text x="1034.5711590861454" y="520.112" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">8,432</text>
+<text x="632" y="547.712" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Aged 18-64</text>
+<rect x="842" y="533.6" width="119.5692726891637" height="19.6" rx="3" fill="#12436D"/>
+<text x="968.5692726891637" y="547.712" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">5,433</text>
+<text x="632" y="575.312" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">With a qualifying diagnosis</text>
+<rect x="842" y="561.2" width="99.98218402850556" height="19.6" rx="3" fill="#28A197"/>
+<text x="948.9821840285056" y="575.312" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">4,543</text>
+<text x="632" y="602.9119999999999" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">With at least one numeric lab resu</text>
+<rect x="842" y="588.8" width="210.0" height="19.6" rx="3" fill="#28A197"/>
+<text x="1059.0" y="602.9119999999999" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">9,542</text>
+<text x="632" y="630.512" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#6B7A8C" font-weight="400" text-anchor="start">Meeting all criteria</text>
+<rect x="842" y="616.4" width="60.21379165793335" height="19.6" rx="3" fill="#F46A25"/>
+<text x="909.2137916579334" y="630.512" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11.5" fill="#12233A" font-weight="600" text-anchor="start">2,736</text>
+</svg>

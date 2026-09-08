@@ -206,27 +206,67 @@ class Measurement:
 
 _IO_RE = re.compile(
     r"Table '(?P<table>[^']+)'\.\s+Scan count \d+, logical reads (?P<reads>\d+)", re.IGNORECASE)
+# Anchored on "Execution Times" rather than matching any "CPU time = N ms".
+# SQL Server emits a "parse and compile time" block in the same shape, and on a
+# cold procedure cache it is frequently the LARGER of the two — reporting it as
+# the query's cost would overstate every measurement by the compile.
 _TIME_RE = re.compile(
-    r"CPU time = (?P<cpu>\d+) ms,\s+elapsed time = (?P<elapsed>\d+) ms", re.IGNORECASE)
+    r"Execution Times:\s*CPU time = (?P<cpu>\d+) ms,\s+elapsed time = (?P<elapsed>\d+) ms",
+    re.IGNORECASE)
 
 
-def _drain_messages(cur) -> str:
-    """pyodbc collects informational messages here; they are not result sets."""
-    text = "\n".join(str(m[1]) for m in (cur.messages or []))
+def _take_messages(cur, into: list[str]) -> None:
+    """Move whatever is currently on `cursor.messages` into `into`, and clear it.
+
+    **This has to be called at every step of consuming a statement, not once at
+    the end**, and that is the whole reason this function exists.
+
+    `SET STATISTICS IO` output arrives as informational messages rather than as
+    a result set, and pyodbc exposes them on `cursor.messages` — but it *resets
+    that list* as it advances through result sets. The first version of this
+    harness drained every result set and then read `messages`, by which point
+    pyodbc had emptied it: every measurement came back `logical reads 0,
+    CPU 0 ms, elapsed 0 ms`, and docs/performance.md published a table of zeros
+    under a heading promising nothing on the page was an estimate.
+
+    Clearing after each read is what keeps the counts right, too: the same IO
+    line is visible at more than one point in the consume loop, and appending
+    without clearing double-counts every table's reads.
+    """
+    for message in cur.messages or []:
+        into.append(str(message[1]))
     cur.messages.clear()
-    return text
 
 
 def _parse_io_and_time(text: str) -> tuple[dict[str, int], int, int]:
-    reads = {}
+    reads: dict[str, int] = {}
     for match in _IO_RE.finditer(text):
         table = match.group("table")
         reads[table] = reads.get(table, 0) + int(match.group("reads"))
     cpu = elapsed = 0
-    # The last "SQL Server Execution Times" block is the statement's own.
+    # The last execution-time block is the statement's own; earlier ones belong
+    # to the SET statements that turned the counters on.
     for match in _TIME_RE.finditer(text):
         cpu, elapsed = int(match.group("cpu")), int(match.group("elapsed"))
     return reads, cpu, elapsed
+
+
+def _dedupe(messages: list[str]) -> list[str]:
+    """Drop exact repeats, preserving order.
+
+    Defensive rather than load-bearing: `_take_messages` clears as it reads, so
+    a line should not arrive twice. If the driver ever hands one back on two
+    consecutive reads, summing it would silently double a table's logical reads
+    — which is the kind of error that makes a benchmark look better than it is.
+    """
+    seen: set[str] = set()
+    unique = []
+    for message in messages:
+        if message in seen:
+            continue
+        seen.add(message)
+        unique.append(message)
+    return unique
 
 
 def _parse_plan(plan_xml: str):
@@ -310,20 +350,32 @@ def measure(cur, sql: str, clear_cache: bool = True) -> Measurement:
             pass
     cur.execute("SET STATISTICS IO ON; SET STATISTICS TIME ON;")
     cur.messages.clear()
+    collected: list[str] = []
     started = time.perf_counter()
     cur.execute(sql)
+    _take_messages(cur, collected)          # compile-time block arrives here
     while True:
         if cur.description:
             cur.fetchall()
+        _take_messages(cur, collected)      # IO and execution-time blocks arrive here
         if not cur.nextset():
             break
+        _take_messages(cur, collected)      # and anything the next set carries
     result.wall_seconds = round(time.perf_counter() - started, 3)
-    messages = _drain_messages(cur)
     cur.execute("SET STATISTICS IO OFF; SET STATISTICS TIME OFF;")
     cur.messages.clear()
 
-    result.logical_reads, result.cpu_ms, result.elapsed_ms = _parse_io_and_time(messages)
+    result.logical_reads, result.cpu_ms, result.elapsed_ms = _parse_io_and_time(
+        "\n".join(collected))
     result.total_logical_reads = sum(result.logical_reads.values())
+    if not result.logical_reads:
+        # A measurement of nothing is not a measurement. Better to stop than to
+        # write zeros into a file that promises none of its numbers are guesses.
+        raise RuntimeError(
+            "no STATISTICS IO output was captured — refusing to record a "
+            "measurement of zero. Messages seen:\n  "
+            + "\n  ".join(collected[:6] or ["(none)"])
+        )
     (result.operators, result.used_batch_mode, result.estimated_subtree_cost,
      result.degree_of_parallelism, result.non_parallel_reason) = _parse_plan(result.plan_xml)
     return result

@@ -29,6 +29,7 @@ import json
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -536,6 +537,67 @@ def ingest_rest(resource_type: str, *, base_url: str | None = None, count: int =
     }
 
 
+def record_live_rest(observations: dict, base_url: str, metrics_path: Path | None = None) -> Path:
+    """Write the `live_rest` block of metrics.json from a pull that just ran.
+
+    The block backs a table in the README and a panel in the dashboard, and
+    before this existed nothing produced it — it was the one set of numbers in
+    the repository with no command behind it. That is the exact failure this
+    repository is built to argue against: a figure nobody can regenerate is a
+    figure nobody can check, however true it happened to be when it was typed.
+
+    `make rest` now regenerates it. The counts move as the public server's
+    contents change, which is why the block carries the date it was observed.
+    """
+    metrics_path = metrics_path or (ROOT / "metrics.json")
+    metrics = {}
+    if metrics_path.exists():
+        try:
+            metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            metrics = {}
+
+    metrics["live_rest"] = {
+        "server": base_url,
+        "observed_on": datetime.now(UTC).strftime("%Y-%m-%d"),
+        # Stated rather than assumed: this client has no write path at all.
+        "writes_performed": 0,
+        "pulls": observations,
+    }
+    metrics_path.write_text(json.dumps(metrics, indent=2) + "\n",
+                            encoding="utf-8", newline="\n")
+    return metrics_path
+
+
+def _reason_slug(reason: str) -> str:
+    """A stable key for a validation reason, for the metrics block.
+
+    pydantic's messages carry the offending value, so using them raw would make
+    every observed run a different set of keys and the block impossible to
+    compare over time.
+    """
+    lowered = reason.lower()
+    if "not valid json" in lowered:
+        return "malformed_json"
+    if "carries no coding" in lowered:
+        return "code_without_coding"
+    if "not modelled" in lowered:
+        return "unmodelled_resource_type"
+    if lowered.startswith("status"):
+        return "missing_status"
+    if lowered.startswith("class"):
+        return "missing_class"
+    if "value set" in lowered:
+        return "code_outside_value_set"
+    if "medication[x]" in lowered:
+        return "medication_choice"
+    if "org-1" in lowered:
+        return "organization_without_name"
+    if "valid fhir id" in lowered:
+        return "malformed_id"
+    return reason.split(":")[0].strip().replace(" ", "_")[:60] or "other"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Ingest FHIR resources into raw.fhir_resource.")
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
@@ -546,23 +608,44 @@ def main(argv: list[str] | None = None) -> int:
                         help="do not filter to the modelled types; every other resource"
                              " in the extract is then quarantined as not modelled")
     parser.add_argument("--rest", action="store_true", help="pull from a live FHIR server instead")
-    parser.add_argument("--resource", default="Patient")
+    parser.add_argument("--resource", default="Patient",
+                        help="one resource type, or several comma-separated")
     parser.add_argument("--base-url", default=None)
     parser.add_argument("--count", type=int, default=50)
     parser.add_argument("--since", default=None)
     parser.add_argument("--include", action="append", default=None)
     parser.add_argument("--max-pages", type=int, default=3)
+    parser.add_argument("--record-metrics", action="store_true",
+                        help="write the live_rest block of metrics.json from this pull")
     args = parser.parse_args(argv)
 
     try:
         if args.rest:
-            result, stats = ingest_rest(
-                args.resource, base_url=args.base_url, count=args.count,
-                since=args.since, include=args.include, max_pages=args.max_pages,
-            )
-            print(f"REST {args.resource}: {stats['pages']} pages, "
-                  f"{stats['requests']} requests, {stats['retries']} retries, "
-                  f"{stats['matched']} match / {stats['included']} include")
+            resources = [r.strip() for r in args.resource.split(",") if r.strip()]
+            observations: dict[str, dict] = {}
+            result = None
+            for resource_type in resources:
+                result, stats = ingest_rest(
+                    resource_type, base_url=args.base_url, count=args.count,
+                    since=args.since, include=args.include, max_pages=args.max_pages,
+                )
+                observations[resource_type] = {
+                    "resources": result.read,
+                    "rejected": result.rejected,
+                    **({"reasons": {
+                        _reason_slug(reason): n
+                        for reason, n in sorted(result.rejects_by_reason.items(),
+                                                key=lambda kv: -kv[1])
+                    }} if result.rejects_by_reason else {}),
+                }
+                print(f"REST {resource_type}: {stats['pages']} pages, "
+                      f"{stats['requests']} requests, {stats['retries']} retries, "
+                      f"{stats['matched']} match / {stats['included']} include, "
+                      f"{result.rejected} rejected")
+            if args.record_metrics:
+                from fhir.client import DEFAULT_BASE_URL
+                written = record_live_rest(observations, args.base_url or DEFAULT_BASE_URL)
+                print(f"recorded live_rest in {written}")
         else:
             result = ingest_bulk(
                 args.source,

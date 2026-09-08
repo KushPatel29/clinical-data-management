@@ -1,15 +1,15 @@
 {
-  "measured_at_utc": "2026-08-05T21:54:58Z",
+  "measured_at_utc": "2026-09-08T05:30:43Z",
   "server": {
     "edition": "Developer Edition (64-bit)",
-    "product_version": "16.0.4265.3",
+    "product_version": "16.0.1000.6",
     "product_level": "RTM",
     "engine_edition": 3
   },
   "host": {
-    "platform": "Linux-6.17.0-1020-azure-x86_64-with-glibc2.39",
-    "processor": "x86_64",
-    "python": "3.11.15"
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "python": "3.12.1"
   },
   "queries": {
     "Q1": {
@@ -19,93 +19,103 @@
       "sql_after": "SELECT d.month_year, p.age_band, COUNT_BIG(*) AS results, AVG(f.value_numeric) AS mean_value FROM dw.FactObservation AS f JOIN dw.DimDate AS d ON d.date_key = f.effective_date_key JOIN dw.DimPatient AS p ON p.patient_key = f.patient_key WHERE f.observation_code_key = ( SELECT TOP (1) observation_code_key FROM dw.FactObservation GROUP BY observation_code_key ORDER BY COUNT_BIG(*) DESC) AND f.is_numeric = 1 AND d.full_date >= '2025-01-01' GROUP BY d.month_year, p.age_band;",
       "fix": "covering nonclustered index",
       "fix_sql": "CREATE NONCLUSTERED INDEX IX_FactObservation_code_date ON dw.FactObservation (observation_code_key, effective_date_key) INCLUDE (patient_key, value_numeric, is_numeric);",
-      "fix_build_seconds": 0.02,
+      "fix_build_seconds": 1.33,
       "before": {
-        "logical_reads_total": 0,
-        "logical_reads_by_table": {},
-        "cpu_ms": 0,
-        "elapsed_ms": 0,
-        "wall_seconds": 0.009,
-        "rows_returned": 91,
-        "estimated_subtree_cost": 0.6473,
-        "batch_mode": false,
-        "degree_of_parallelism": 1,
+        "logical_reads_total": 52237,
+        "logical_reads_by_table": {
+          "FactObservation": 49976,
+          "DimPatient": 826,
+          "DimDate": 1435,
+          "Worktable": 0
+        },
+        "cpu_ms": 1092,
+        "elapsed_ms": 201,
+        "wall_seconds": 0.203,
+        "rows_returned": 100,
+        "estimated_subtree_cost": 37.1656,
+        "batch_mode": true,
+        "degree_of_parallelism": 11,
         "non_parallel_reason": "",
         "top_operators": [
           {
+            "physical": "Parallelism",
+            "logical": "Gather Streams",
+            "subtree_cost": 37.1656
+          },
+          {
             "physical": "Compute Scalar",
             "logical": "Compute Scalar",
-            "subtree_cost": 0.6473
+            "subtree_cost": 37.137
           },
           {
-            "physical": "Stream Aggregate",
+            "physical": "Hash Match",
             "logical": "Aggregate",
-            "subtree_cost": 0.6473
+            "subtree_cost": 37.137
           },
           {
-            "physical": "Sort",
-            "logical": "Sort",
-            "subtree_cost": 0.6473
-          },
-          {
-            "physical": "Nested Loops",
+            "physical": "Hash Match",
             "logical": "Inner Join",
-            "subtree_cost": 0.6359
+            "subtree_cost": 37.1352
           },
           {
-            "physical": "Nested Loops",
+            "physical": "Hash Match",
             "logical": "Inner Join",
-            "subtree_cost": 0.6271
+            "subtree_cost": 36.7692
           },
           {
-            "physical": "Nested Loops",
+            "physical": "Adaptive Join",
             "logical": "Inner Join",
-            "subtree_cost": 0.5951
+            "subtree_cost": 18.706
           }
         ],
         "plan": "docs/plans/Q1_before.sqlplan"
       },
       "after": {
-        "logical_reads_total": 0,
-        "logical_reads_by_table": {},
-        "cpu_ms": 0,
-        "elapsed_ms": 0,
-        "wall_seconds": 0.005,
-        "rows_returned": 91,
-        "estimated_subtree_cost": 0.1524,
-        "batch_mode": false,
+        "logical_reads_total": 7623,
+        "logical_reads_by_table": {
+          "DimPatient": 277,
+          "Worktable": 0,
+          "FactObservation": 6899,
+          "DimDate": 447
+        },
+        "cpu_ms": 782,
+        "elapsed_ms": 801,
+        "wall_seconds": 0.802,
+        "rows_returned": 100,
+        "estimated_subtree_cost": 7.9521,
+        "batch_mode": true,
         "degree_of_parallelism": 1,
         "non_parallel_reason": "",
         "top_operators": [
           {
-            "physical": "Compute Scalar",
-            "logical": "Compute Scalar",
-            "subtree_cost": 0.1524
+            "physical": "Nested Loops",
+            "logical": "Inner Join",
+            "subtree_cost": 7.9521
+          },
+          {
+            "physical": "Sort",
+            "logical": "TopN Sort",
+            "subtree_cost": 7.2255
           },
           {
             "physical": "Stream Aggregate",
             "logical": "Aggregate",
-            "subtree_cost": 0.1524
+            "subtree_cost": 7.2199
           },
           {
-            "physical": "Sort",
-            "logical": "Sort",
-            "subtree_cost": 0.1524
+            "physical": "Index Scan",
+            "logical": "Index Scan",
+            "subtree_cost": 6.4135
           },
           {
-            "physical": "Nested Loops",
-            "logical": "Inner Join",
-            "subtree_cost": 0.141
+            "physical": "Compute Scalar",
+            "logical": "Compute Scalar",
+            "subtree_cost": 0.7259
           },
           {
-            "physical": "Nested Loops",
-            "logical": "Inner Join",
-            "subtree_cost": 0.1322
-          },
-          {
-            "physical": "Nested Loops",
-            "logical": "Inner Join",
-            "subtree_cost": 0.1002
+            "physical": "Stream Aggregate",
+            "logical": "Aggregate",
+            "subtree_cost": 0.7259
           }
         ],
         "plan": "docs/plans/Q1_after.sqlplan"
@@ -118,93 +128,103 @@
       "sql_after": "SELECT c.code, c.code_display, d.fiscal_year, d.fiscal_quarter, COUNT_BIG(*) AS results, AVG(f.value_numeric) AS mean_value, MIN(f.value_numeric) AS min_value, MAX(f.value_numeric) AS max_value FROM dw.FactObservation AS f JOIN dw.DimObservationCode AS c ON c.observation_code_key = f.observation_code_key JOIN dw.DimDate AS d ON d.date_key = f.effective_date_key WHERE f.is_numeric = 1 GROUP BY c.code, c.code_display, d.fiscal_year, d.fiscal_quarter;",
       "fix": "nonclustered columnstore index",
       "fix_sql": "CREATE NONCLUSTERED COLUMNSTORE INDEX NCCI_FactObservation ON dw.FactObservation (observation_code_key, effective_date_key, patient_key, value_numeric, is_numeric);",
-      "fix_build_seconds": 0.08,
+      "fix_build_seconds": 10.49,
       "before": {
-        "logical_reads_total": 0,
-        "logical_reads_by_table": {},
-        "cpu_ms": 0,
-        "elapsed_ms": 0,
-        "wall_seconds": 0.033,
-        "rows_returned": 674,
-        "estimated_subtree_cost": 1.4635,
-        "batch_mode": false,
-        "degree_of_parallelism": 1,
+        "logical_reads_total": 8233,
+        "logical_reads_by_table": {
+          "FactObservation": 6779,
+          "DimDate": 1435,
+          "DimObservationCode": 19,
+          "Worktable": 0
+        },
+        "cpu_ms": 890,
+        "elapsed_ms": 179,
+        "wall_seconds": 0.18,
+        "rows_returned": 1481,
+        "estimated_subtree_cost": 6.2227,
+        "batch_mode": true,
+        "degree_of_parallelism": 11,
         "non_parallel_reason": "",
         "top_operators": [
           {
+            "physical": "Parallelism",
+            "logical": "Gather Streams",
+            "subtree_cost": 6.2227
+          },
+          {
             "physical": "Compute Scalar",
             "logical": "Compute Scalar",
-            "subtree_cost": 1.4635
+            "subtree_cost": 6.0491
           },
           {
-            "physical": "Stream Aggregate",
+            "physical": "Hash Match",
             "logical": "Aggregate",
-            "subtree_cost": 1.4635
-          },
-          {
-            "physical": "Sort",
-            "logical": "Sort",
-            "subtree_cost": 1.4542
+            "subtree_cost": 6.0491
           },
           {
             "physical": "Hash Match",
             "logical": "Inner Join",
-            "subtree_cost": 0.9812
+            "subtree_cost": 5.6755
           },
           {
             "physical": "Hash Match",
             "logical": "Inner Join",
-            "subtree_cost": 0.8831
+            "subtree_cost": 5.5838
           },
           {
-            "physical": "Clustered Index Scan",
-            "logical": "Clustered Index Scan",
-            "subtree_cost": 0.4113
+            "physical": "Index Scan",
+            "logical": "Index Scan",
+            "subtree_cost": 5.0694
           }
         ],
         "plan": "docs/plans/Q2_before.sqlplan"
       },
       "after": {
-        "logical_reads_total": 0,
-        "logical_reads_by_table": {},
-        "cpu_ms": 0,
-        "elapsed_ms": 0,
-        "wall_seconds": 0.029,
-        "rows_returned": 674,
-        "estimated_subtree_cost": 0.5085,
+        "logical_reads_total": 1454,
+        "logical_reads_by_table": {
+          "FactObservation": 0,
+          "DimDate": 1435,
+          "DimObservationCode": 19,
+          "Worktable": 0
+        },
+        "cpu_ms": 203,
+        "elapsed_ms": 100,
+        "wall_seconds": 0.102,
+        "rows_returned": 1481,
+        "estimated_subtree_cost": 1.2489,
         "batch_mode": true,
-        "degree_of_parallelism": 1,
+        "degree_of_parallelism": 11,
         "non_parallel_reason": "",
         "top_operators": [
           {
+            "physical": "Parallelism",
+            "logical": "Gather Streams",
+            "subtree_cost": 1.2489
+          },
+          {
             "physical": "Compute Scalar",
             "logical": "Compute Scalar",
-            "subtree_cost": 0.5085
+            "subtree_cost": 1.0754
           },
           {
-            "physical": "Stream Aggregate",
+            "physical": "Hash Match",
             "logical": "Aggregate",
-            "subtree_cost": 0.5085
-          },
-          {
-            "physical": "Clustered Index Seek",
-            "logical": "Clustered Index Seek",
-            "subtree_cost": 0.5085
-          },
-          {
-            "physical": "Sort",
-            "logical": "Sort",
-            "subtree_cost": 0.4991
+            "subtree_cost": 1.0754
           },
           {
             "physical": "Hash Match",
             "logical": "Inner Join",
-            "subtree_cost": 0.4491
+            "subtree_cost": 0.7018
           },
           {
-            "physical": "Adaptive Join",
+            "physical": "Hash Match",
             "logical": "Inner Join",
-            "subtree_cost": 0.435
+            "subtree_cost": 0.61
+          },
+          {
+            "physical": "Clustered Index Scan",
+            "logical": "Clustered Index Scan",
+            "subtree_cost": 0.3614
           }
         ],
         "plan": "docs/plans/Q2_after.sqlplan"
@@ -219,67 +239,81 @@
       "fix_sql": "",
       "fix_build_seconds": 0.0,
       "before": {
-        "logical_reads_total": 0,
-        "logical_reads_by_table": {},
-        "cpu_ms": 0,
-        "elapsed_ms": 0,
-        "wall_seconds": 0.351,
+        "logical_reads_total": 353606,
+        "logical_reads_by_table": {
+          "fhir_resource": 353606
+        },
+        "cpu_ms": 78047,
+        "elapsed_ms": 101980,
+        "wall_seconds": 101.981,
         "rows_returned": 1,
-        "estimated_subtree_cost": 2.3602,
-        "batch_mode": false,
+        "estimated_subtree_cost": 288.512,
+        "batch_mode": true,
         "degree_of_parallelism": 1,
         "non_parallel_reason": "TSQLUserDefinedFunctionsNotParallelizable",
         "top_operators": [
           {
-            "physical": "Stream Aggregate",
+            "physical": "Hash Match",
             "logical": "Aggregate",
-            "subtree_cost": 2.3602
+            "subtree_cost": 288.512
           },
           {
             "physical": "Filter",
             "logical": "Filter",
-            "subtree_cost": 2.3531
+            "subtree_cost": 288.366
           },
           {
             "physical": "Clustered Index Seek",
             "logical": "Clustered Index Seek",
-            "subtree_cost": 2.3437
+            "subtree_cost": 287.528
           }
         ],
         "plan": "docs/plans/Q3_before.sqlplan"
       },
       "after": {
-        "logical_reads_total": 0,
-        "logical_reads_by_table": {},
-        "cpu_ms": 0,
-        "elapsed_ms": 0,
-        "wall_seconds": 0.453,
+        "logical_reads_total": 361489,
+        "logical_reads_by_table": {
+          "fhir_resource": 361489
+        },
+        "cpu_ms": 146923,
+        "elapsed_ms": 20025,
+        "wall_seconds": 20.027,
         "rows_returned": 1,
-        "estimated_subtree_cost": 2.3913,
+        "estimated_subtree_cost": 286.988,
         "batch_mode": false,
-        "degree_of_parallelism": 1,
+        "degree_of_parallelism": 11,
         "non_parallel_reason": "",
         "top_operators": [
           {
             "physical": "Stream Aggregate",
             "logical": "Aggregate",
-            "subtree_cost": 2.3913
+            "subtree_cost": 286.988
+          },
+          {
+            "physical": "Parallelism",
+            "logical": "Gather Streams",
+            "subtree_cost": 286.988
+          },
+          {
+            "physical": "Stream Aggregate",
+            "logical": "Aggregate",
+            "subtree_cost": 286.96
           },
           {
             "physical": "Filter",
             "logical": "Filter",
-            "subtree_cost": 2.3841
+            "subtree_cost": 286.902
           },
           {
             "physical": "Clustered Index Seek",
             "logical": "Clustered Index Seek",
-            "subtree_cost": 2.3437
+            "subtree_cost": 286.575
           }
         ],
         "plan": "docs/plans/Q3_after.sqlplan"
       }
     }
   },
-  "fact_observation_rows": 15071,
-  "fact_encounter_rows": 1744
+  "fact_observation_rows": 1343927,
+  "fact_encounter_rows": 169906
 }

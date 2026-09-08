@@ -17,11 +17,11 @@ Three queries, each with one specific change, measured before and after.
 
 | | |
 |---|---|
-| Engine | Developer Edition (64-bit) 16.0.4265.3 RTM |
-| Host | Linux-6.17.0-1020-azure-x86_64-with-glibc2.39 |
-| `dw.FactObservation` | 15,071 rows |
-| `dw.FactEncounter` | 1,744 rows |
-| Measured | 2026-08-05T21:54:58Z |
+| Engine | Developer Edition (64-bit) 16.0.1000.6 RTM |
+| Host | Windows-11-10.0.26200-SP0 |
+| `dw.FactObservation` | 1,343,927 rows |
+| `dw.FactEncounter` | 169,906 rows |
+| Measured | 2026-09-08T05:30:43Z |
 
 ## Q1 — Result trend for one observation type over a date range
 
@@ -31,7 +31,7 @@ Monthly mean and volume for a single LOINC code across a two-year window, split 
 SELECT d.month_year, p.age_band, COUNT_BIG(*) AS results, AVG(f.value_numeric) AS mean_value FROM dw.FactObservation AS f JOIN dw.DimDate AS d ON d.date_key = f.effective_date_key JOIN dw.DimPatient AS p ON p.patient_key = f.patient_key WHERE f.observation_code_key = ( SELECT TOP (1) observation_code_key FROM dw.FactObservation GROUP BY observation_code_key ORDER BY COUNT_BIG(*) DESC) AND f.is_numeric = 1 AND d.full_date >= '2025-01-01' GROUP BY d.month_year, p.age_band;
 ```
 
-**Change applied:** covering nonclustered index, built in 0.02s.
+**Change applied:** covering nonclustered index, built in 1.33s.
 
 ```sql
 CREATE NONCLUSTERED INDEX IX_FactObservation_code_date ON dw.FactObservation (observation_code_key, effective_date_key) INCLUDE (patient_key, value_numeric, is_numeric);
@@ -39,31 +39,36 @@ CREATE NONCLUSTERED INDEX IX_FactObservation_code_date ON dw.FactObservation (ob
 
 | Measure | Before | After | Change |
 |---|---:|---:|---|
-| Logical reads | 0 | 0 | n/a |
-| CPU (ms) | 0 | 0 | n/a |
-| Elapsed (ms) | 0 | 0 | n/a |
-| Estimated subtree cost | 0.6473 | 0.1524 | -76.5% |
-| Batch mode | no | no | |
-| Rows returned | 91 | 91 | same |
+| Logical reads | 52,237 | 7,623 | -85.4% |
+| CPU (ms) | 1,092 | 782 | -28.4% |
+| Elapsed (ms) | 201 | 801 | +298.5% |
+| Estimated subtree cost | 37.1656 | 7.9521 | -78.6% |
+| Batch mode | yes | yes | |
+| Rows returned | 100 | 100 | same |
 
 **Logical reads by table**
 
 | Table | Before | After |
 |---|---:|---:|
+| `DimDate` | 1,435 | 447 |
+| `DimPatient` | 826 | 277 |
+| `FactObservation` | 49,976 | 6,899 |
+| `Worktable` | 0 | 0 |
 
 **Plan operators, most expensive first**
 
 | | Before | After |
 |---|---|---|
-| 1 | `Compute Scalar` (0.6473) | `Compute Scalar` (0.1524) |
-| 2 | `Stream Aggregate` (0.6473) | `Stream Aggregate` (0.1524) |
-| 3 | `Sort` (0.6473) | `Sort` (0.1524) |
-| 4 | `Nested Loops` (0.6359) | `Nested Loops` (0.141) |
-| 5 | `Nested Loops` (0.6271) | `Nested Loops` (0.1322) |
+| 1 | `Parallelism` (37.1656) | `Nested Loops` (7.9521) |
+| 2 | `Compute Scalar` (37.137) | `Sort` (7.2255) |
+| 3 | `Hash Match` (37.137) | `Stream Aggregate` (7.2199) |
+| 4 | `Hash Match` (37.1352) | `Index Scan` (6.4135) |
+| 5 | `Hash Match` (36.7692) | `Compute Scalar` (0.7259) |
 
 **What changed in the plan**
 
-- The same operators, at different costs. Recorded as measured.
+- Gone: `Adaptive Join`, `Hash Match`, `Parallelism`
+- Arrived: `Index Scan`, `Nested Loops`, `Sort`, `Stream Aggregate`
 
 Plans: [`docs/plans/Q1_before.sqlplan`](plans/Q1_before.sqlplan) · [`docs/plans/Q1_after.sqlplan`](plans/Q1_after.sqlplan)
 
@@ -75,7 +80,7 @@ Volume, mean and spread for every observation code by fiscal quarter — the ext
 SELECT c.code, c.code_display, d.fiscal_year, d.fiscal_quarter, COUNT_BIG(*) AS results, AVG(f.value_numeric) AS mean_value, MIN(f.value_numeric) AS min_value, MAX(f.value_numeric) AS max_value FROM dw.FactObservation AS f JOIN dw.DimObservationCode AS c ON c.observation_code_key = f.observation_code_key JOIN dw.DimDate AS d ON d.date_key = f.effective_date_key WHERE f.is_numeric = 1 GROUP BY c.code, c.code_display, d.fiscal_year, d.fiscal_quarter;
 ```
 
-**Change applied:** nonclustered columnstore index, built in 0.08s.
+**Change applied:** nonclustered columnstore index, built in 10.49s.
 
 ```sql
 CREATE NONCLUSTERED COLUMNSTORE INDEX NCCI_FactObservation ON dw.FactObservation (observation_code_key, effective_date_key, patient_key, value_numeric, is_numeric);
@@ -83,32 +88,36 @@ CREATE NONCLUSTERED COLUMNSTORE INDEX NCCI_FactObservation ON dw.FactObservation
 
 | Measure | Before | After | Change |
 |---|---:|---:|---|
-| Logical reads | 0 | 0 | n/a |
-| CPU (ms) | 0 | 0 | n/a |
-| Elapsed (ms) | 0 | 0 | n/a |
-| Estimated subtree cost | 1.4635 | 0.5085 | -65.3% |
-| Batch mode | no | yes | |
-| Rows returned | 674 | 674 | same |
+| Logical reads | 8,233 | 1,454 | -82.3% |
+| CPU (ms) | 890 | 203 | -77.2% |
+| Elapsed (ms) | 179 | 100 | -44.1% |
+| Estimated subtree cost | 6.2227 | 1.2489 | -79.9% |
+| Batch mode | yes | yes | |
+| Rows returned | 1,481 | 1,481 | same |
 
 **Logical reads by table**
 
 | Table | Before | After |
 |---|---:|---:|
+| `DimDate` | 1,435 | 1,435 |
+| `DimObservationCode` | 19 | 19 |
+| `FactObservation` | 6,779 | 0 |
+| `Worktable` | 0 | 0 |
 
 **Plan operators, most expensive first**
 
 | | Before | After |
 |---|---|---|
-| 1 | `Compute Scalar` (1.4635) | `Compute Scalar` (0.5085) |
-| 2 | `Stream Aggregate` (1.4635) | `Stream Aggregate` (0.5085) |
-| 3 | `Sort` (1.4542) | `Clustered Index Seek` (0.5085) |
-| 4 | `Hash Match` (0.9812) | `Sort` (0.4991) |
-| 5 | `Hash Match` (0.8831) | `Hash Match` (0.4491) |
+| 1 | `Parallelism` (6.2227) | `Parallelism` (1.2489) |
+| 2 | `Compute Scalar` (6.0491) | `Compute Scalar` (1.0754) |
+| 3 | `Hash Match` (6.0491) | `Hash Match` (1.0754) |
+| 4 | `Hash Match` (5.6755) | `Hash Match` (0.7018) |
+| 5 | `Hash Match` (5.5838) | `Hash Match` (0.61) |
 
 **What changed in the plan**
 
-- Gone: `Clustered Index Scan`
-- Arrived: `Adaptive Join`, `Clustered Index Seek`
+- Gone: `Index Scan`
+- Arrived: `Clustered Index Scan`
 
 Plans: [`docs/plans/Q2_before.sqlplan`](plans/Q2_before.sqlplan) · [`docs/plans/Q2_after.sqlplan`](plans/Q2_after.sqlplan)
 
@@ -128,29 +137,33 @@ SELECT COUNT_BIG(*) AS resolved FROM raw.fhir_resource AS r WHERE r.resource_typ
 
 | Measure | Before | After | Change |
 |---|---:|---:|---|
-| Logical reads | 0 | 0 | n/a |
-| CPU (ms) | 0 | 0 | n/a |
-| Elapsed (ms) | 0 | 0 | n/a |
-| Estimated subtree cost | 2.3602 | 2.3913 | +1.3% |
-| Batch mode | no | no | |
+| Logical reads | 353,606 | 361,489 | +2.2% |
+| CPU (ms) | 78,047 | 146,923 | +88.2% |
+| Elapsed (ms) | 101,980 | 20,025 | -80.4% |
+| Estimated subtree cost | 288.512 | 286.988 | -0.5% |
+| Batch mode | yes | no | |
 | Rows returned | 1 | 1 | same |
 
 **Logical reads by table**
 
 | Table | Before | After |
 |---|---:|---:|
+| `fhir_resource` | 353,606 | 361,489 |
 
 **Plan operators, most expensive first**
 
 | | Before | After |
 |---|---|---|
-| 1 | `Stream Aggregate` (2.3602) | `Stream Aggregate` (2.3913) |
-| 2 | `Filter` (2.3531) | `Filter` (2.3841) |
-| 3 | `Clustered Index Seek` (2.3437) | `Clustered Index Seek` (2.3437) |
+| 1 | `Hash Match` (288.512) | `Stream Aggregate` (286.988) |
+| 2 | `Filter` (288.366) | `Parallelism` (286.988) |
+| 3 | `Clustered Index Seek` (287.528) | `Stream Aggregate` (286.96) |
+| 4 | — | `Filter` (286.902) |
+| 5 | — | `Clustered Index Seek` (286.575) |
 
 **What changed in the plan**
 
-- The same operators, at different costs. Recorded as measured.
+- Gone: `Hash Match`
+- Arrived: `Parallelism`, `Stream Aggregate`
 
 Plans: [`docs/plans/Q3_before.sqlplan`](plans/Q3_before.sqlplan) · [`docs/plans/Q3_after.sqlplan`](plans/Q3_after.sqlplan)
 

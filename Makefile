@@ -62,9 +62,14 @@ warehouse:
 
 # The live REST path, against the public HAPI test server. Separate from the
 # bulk load because it depends on someone else's server being up.
+# Also rewrites the live_rest block of metrics.json — the source for the
+# README's live-server table and the dashboard's REST panel. Those counts move
+# as the public server's contents change, so the block carries the date it was
+# observed. Before this target existed they were the one set of figures in the
+# repository with no command behind them.
 rest:
-	$(PYTHON) fhir/ingest.py --rest --resource Patient --count 50 --max-pages 3 \
-		--include Patient:general-practitioner
+	$(PYTHON) fhir/ingest.py --rest --resource Patient,Observation,Encounter \
+		--count 50 --max-pages 3 --record-metrics
 
 dq:
 	$(PYTHON) tests/dq/run_dq.py

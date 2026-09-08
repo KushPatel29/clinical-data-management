@@ -1,6 +1,10 @@
 name: CI
 
 on:
+  # Weekly, so a green badge means the tests pass now rather
+  # than that they passed the day of the last push.
+  schedule:
+    - cron: "14 6 * * 2"
   push:
   pull_request:
 
@@ -43,7 +47,7 @@ jobs:
         # importing httpx — and that failure would look like a broken test suite
         # rather than what it is. Naming the CDM tests is also what proves the
         # claim: these run with no third-party package present at all.
-        run: pytest tests/test_edit_checks.py tests/test_sdtm_and_coding.py tests/test_dashboard.py -v
+        run: pytest tests/test_edit_checks.py tests/test_sdtm_and_coding.py tests/test_dashboard.py tests/test_published_prose.py -v
 
   # ---------------------------------------------------------------------------
   # The public evidence console. It reads only committed synthetic artefacts,
@@ -80,7 +84,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - run: pip install ruff
       - run: ruff check .
 
@@ -98,7 +102,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install
         run: pip install pytest httpx pydantic
@@ -140,7 +144,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - uses: actions/setup-java@v4
         with:

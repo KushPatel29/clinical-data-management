@@ -432,6 +432,40 @@ class ObservationModel(FhirResource):
             raise ValueError("Observation.code carries no coding")
         return value
 
+    def model_post_init(self, _context: Any) -> None:
+        """A measured number with no unit is not interpretable, so it is
+        quarantined rather than loaded.
+
+        FHIR allows it: `Quantity.value` is 0..1 and neither `unit` (the display
+        form) nor `code` (the UCUM form) is required, so a bare `{"value": 21.998}`
+        conforms. This warehouse does not accept it, and that is a policy rather
+        than a spec reading — 5 mg and 5 g differ by a factor that kills people,
+        and a warehouse that averages unlabelled numbers will eventually average
+        those two.
+
+        Five observations in a 925,283-resource extract take this shape: a Cobb
+        angle and a body-position score carrying a value and a UCUM *system* but
+        no unit at all. They are refused here, with the reason, and land in
+        stg.ingest_rejects where they stay countable. They are not dropped, and
+        they no longer take a fifteen-minute shred down with a check-constraint
+        violation five hundred seconds in.
+        """
+        quantity = self.valueQuantity
+        if quantity is not None and quantity.value is not None:
+            if not quantity.unit and not quantity.code:
+                raise ValueError(
+                    "Observation.valueQuantity carries a value with neither unit "
+                    "nor code; the measurement is not interpretable"
+                )
+        for index, component in enumerate(self.component):
+            component_quantity = component.valueQuantity
+            if component_quantity is not None and component_quantity.value is not None:
+                if not component_quantity.unit and not component_quantity.code:
+                    raise ValueError(
+                        f"Observation.component[{index}].valueQuantity carries a "
+                        "value with neither unit nor code"
+                    )
+
 
 PROCEDURE_STATUS = {
     "preparation", "in-progress", "not-done", "on-hold", "stopped",
