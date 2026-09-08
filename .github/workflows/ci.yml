@@ -252,11 +252,31 @@ jobs:
           PY
 
       - name: Rebuild, measure, document, and test
+        # The measurement is echoed as annotations and pytest's tail is
+        # captured on failure, because this job's log needs admin rights on the
+        # repository to read and the person debugging it may not have them.
         run: |
           python db/build_warehouse.py --reset
           python analytics/measure_performance.py
+          python - <<'PY'
+          import json
+          results = json.load(open("docs/performance_results.json"))
+          for key, query in results["queries"].items():
+              before, after = query["before"], query["after"]
+              print(f"::notice::{key}: before "
+                    f"{before['logical_reads_total']} reads / "
+                    f"{before['elapsed_ms']} ms, after "
+                    f"{after['logical_reads_total']} reads / "
+                    f"{after['elapsed_ms']} ms")
+          PY
           python docs/build_docs.py
-          pytest tests/ -v
+          if ! pytest tests/ -q > pytest.log 2>&1; then
+            tail -30 pytest.log | while read -r line; do
+              echo "::error::${line:0:180}"
+            done
+            exit 1
+          fi
+          tail -3 pytest.log
 
       - name: Regenerate the documentation
         # A `git diff --exit-code` here would be the obvious check and would be
