@@ -1,0 +1,15 @@
+{
+  "cohorts": 3,
+  "control_id": "CDM-REL-01",
+  "decision": "REVIEW REQUIRED",
+  "demonstration_boundary": "All data and workflow assignments are synthetic. REVIEW is a deterministic evidence state, not a regulatory approval, database lock, investigator sign-off, or authorization for patient care.",
+  "gates_blocked": 0,
+  "gates_passed": 5,
+  "gates_review": 2,
+  "human_approvals_recorded": 0,
+  "register_fingerprint": "eeca413793d22db5772163a47144a3f0ce76f65083f267efc5c41c44b4a4fefa",
+  "release_id": "SYN-2026-01-CUT-001",
+  "schema_version": 1,
+  "study_id": "SYN-2026-01",
+  "subjects": 120
+}

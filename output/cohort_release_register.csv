@@ -1,0 +1,4 @@
+cohort_id,label,definition,owner,subjects,edc_rows,query_rows,ae_rows,member_fingerprint
+COHORT-ALL-1.0.0,All enrolled subjects,Every subject in data/subjects.csv,Clinical Data Manager,120,8754,49,372,2E232AEE46164D81
+COHORT-SAFETY-1.0.0,Safety population,Subjects with at least one SDTM AE record,Safety Data Reviewer,105,8066,47,372,EAFD4A2F0243436A
+COHORT-SITE102-1.0.0,SITE-102 operational review,Subjects assigned to SITE-102,Site Data Lead,27,1946,10,84,EC1A684F18941A2A

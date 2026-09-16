@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "control_id": "CDM-REL-01",
+  "study_id": "SYN-2026-01",
+  "release_id": "SYN-2026-01-CUT-001",
+  "data_classification": "Synthetic portfolio demonstration",
+  "decision_order": ["PASS", "REVIEW", "BLOCK"],
+  "cohorts": [
+    {
+      "cohort_id": "COHORT-ALL-1.0.0",
+      "label": "All enrolled subjects",
+      "definition": "Every subject in data/subjects.csv",
+      "owner": "Clinical Data Manager"
+    },
+    {
+      "cohort_id": "COHORT-SAFETY-1.0.0",
+      "label": "Safety population",
+      "definition": "Subjects with at least one SDTM AE record",
+      "owner": "Safety Data Reviewer"
+    },
+    {
+      "cohort_id": "COHORT-SITE102-1.0.0",
+      "label": "SITE-102 operational review",
+      "definition": "Subjects assigned to SITE-102",
+      "owner": "Site Data Lead"
+    }
+  ],
+  "required_evidence": [
+    "data/subjects.csv",
+    "data/edc_item_data.csv",
+    "data/injected_defects.csv",
+    "data/injected_fhir_defects.csv",
+    "data/patient_change_manifest.csv",
+    "output/query_log.csv",
+    "output/sdtm/ae.csv",
+    "output/sdtm/dm.csv",
+    "output/sdtm/vs.csv",
+    "output/sdtm_conformance.csv",
+    "output/uat_plan.csv",
+    "metrics.json"
+  ],
+  "reverification_triggers": [
+    "cohort definition or source population changes",
+    "source evidence hash changes",
+    "protocol, edit check, terminology or SDTM mapping changes",
+    "FHIR validation or quarantine rule changes",
+    "UAT execution status changes"
+  ],
+  "demonstration_boundary": "All data and workflow assignments are synthetic. REVIEW is a deterministic evidence state, not a regulatory approval, database lock, investigator sign-off, or authorization for patient care."
+}

@@ -41,7 +41,7 @@ def render_without_retained_metrics() -> None:
         app = AppTest.from_file(str(ROOT / "dashboard" / "app.py"), default_timeout=60)
         app.run()
         assert not app.exception, app.exception
-        assert len(app.tabs) == 5
+        assert len(app.tabs) == 6
     finally:
         shutil.copy2(backup, METRICS)
         backup.unlink(missing_ok=True)
@@ -53,18 +53,18 @@ def main() -> None:
     assert len(data["queries"]) == len(data["trial_defects"]) == 49
     assert len(data["fhir_defects"]) == 24
     assert data["sdtm_conformance"].empty
-    assert source_ledger(data)["source"].nunique() == 15
+    assert source_ledger(data)["source"].nunique() == 19
 
     app = AppTest.from_file(str(ROOT / "dashboard" / "app.py"), default_timeout=60)
     app.run()
     assert not app.exception, app.exception
-    assert len(app.tabs) == 5
+    assert len(app.tabs) == 6
     assert len(app.sidebar.multiselect) == 2
 
     app.sidebar.multiselect[0].set_value(["SITE-102"])
     app.run()
     assert not app.exception, app.exception
-    assert len(app.tabs) == 5
+    assert len(app.tabs) == 6
 
     # Streamlit Community Cloud executes with dashboard/ as the working
     # directory. Exercise that exact import shape in a fresh interpreter so a
@@ -73,7 +73,7 @@ def main() -> None:
 from streamlit.testing.v1 import AppTest
 app = AppTest.from_file('app.py', default_timeout=60).run()
 assert not app.exception, app.exception
-assert len(app.tabs) == 5
+assert len(app.tabs) == 6
 """
     subprocess.run(
         [sys.executable, "-c", cloud_check],

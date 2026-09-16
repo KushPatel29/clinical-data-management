@@ -5,7 +5,7 @@
 ![CDISC](https://img.shields.io/badge/CDISC-CDASH%20%2B%20SDTM-0B5FA5)
 ![HL7 FHIR](https://img.shields.io/badge/HL7%20FHIR-R4-E4002B)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927)
-![Tests](https://img.shields.io/badge/tests-255%20passing-3B8C6E)
+![Tests](https://img.shields.io/badge/tests-281%20passing-3B8C6E)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 Two halves of the same problem, in one repository.
@@ -29,13 +29,18 @@ yet. `dw.vw_trial_feasibility` is that count.
 
 Everything here is synthetic. No real trial, no real patients, no PHI.
 
+**Start with the data-cut decision:**
+[`output/clinical_evidence_release_packet.md`](output/clinical_evidence_release_packet.md)
+shows what passes, what still requires review, which versioned cohorts were
+evaluated, and exactly why this repository does not claim a regulatory release.
+
 ## Live evidence console
 
 [![Clinical Evidence Console overview showing cohort controls and evidence lineage](docs/dashboard/clinical-evidence-overview.png)](https://kush-clinical-data-dashboard.streamlit.app/)
 
 <p align="center">
   <strong><a href="https://kush-clinical-data-dashboard.streamlit.app/">Launch the interactive Clinical Evidence Console →</a></strong><br>
-  Five linked views · one coherent cohort · synthetic data only
+  Six linked views · one coherent cohort · synthetic data only
 </p>
 
 The console is a read-only view over the versioned evidence in this repository.
@@ -83,6 +88,43 @@ exactly the manifest — not approximately, and with the right *reason* each tim
 ```
 injected 24   quarantined 24   across 8 defect classes   silently dropped 0
 ```
+
+## A clinical data cut must be releasable, not merely complete
+
+[`governance/evidence_release.py`](governance/evidence_release.py) binds the
+trial, SDTM, FHIR and warehouse artefacts into control **CDM-REL-01**. Three
+cohort definitions are versioned and fingerprinted: all enrolled subjects,
+the safety population, and the SITE-102 operational review. Each carries an
+owner, subject count, EDC/query/AE evidence counts, and a deterministic member
+fingerprint.
+
+The current result is intentionally **REVIEW REQUIRED**:
+
+| Release gate | Result | Evidence |
+|---|---|---|
+| Cohort identity | PASS | 120/120 source subjects reconcile to SDTM DM |
+| Defect-to-query reconciliation | PASS | 49 exact query identities for 49 planted defects |
+| Implemented SDTM conformance | PASS | 0 findings in the implemented rules |
+| FHIR planted-defect contract | PASS | 24 expected rejects across 8 classes; exact quarantine recovery runs in CI |
+| Generator provenance | PASS | fixed seed, reference date and Synthea jar SHA-256 |
+| Runtime quarantine traceability | REVIEW | 5 rejects are summarized, but the protected row-level operational ledger is not published |
+| UAT execution | REVIEW | 80 cases are generated; 0 are represented as executed |
+
+This distinction matters. A public repository can prove its validation logic
+without fabricating a protected operational reject ledger, executed UAT, human
+signature, database lock or regulatory approval. The generated package keeps
+those boundaries visible:
+
+- [`evidence_release_policy.json`](governance/evidence_release_policy.json) — control, cohorts, evidence and re-verification triggers
+- [`cohort_release_register.csv`](output/cohort_release_register.csv) — three accountable, versioned cohort records
+- [`evidence_release_gates.csv`](output/evidence_release_gates.csv) — seven release gates with observed evidence
+- [`evidence_release_manifest.json`](output/evidence_release_manifest.json) — 12 canonical source hashes and the register fingerprint
+- [`clinical_reverification_evidence.json`](output/clinical_reverification_evidence.json) — one in-memory subject mismatch moves the release to BLOCKED without changing a source file
+- [`clinical_evidence_release_packet.md`](output/clinical_evidence_release_packet.md) — the two-minute reviewer docket
+
+The live console exposes the same decision in **05 · Release assurance**. Its
+re-verification demonstration proves the control can close; it is not a
+ceremonial status tile.
 
 That second manifest earned its keep on the first run: **24 resources corrupted,
 21 quarantined.** The three that escaped are described below.
@@ -576,6 +618,7 @@ make data           # Synthea: 10,000 patients (needs a JDK and the jar)
 make warehouse      # schema, ingest, shred, star, change feed, metrics
 make dq             # the T-SQL data quality suite
 make perf           # measure three tuned queries, rewrite docs/performance.md
+python governance/evidence_release.py  # version cohorts, evaluate gates, fingerprint evidence
 make test           # the full suite
 ```
 
@@ -609,7 +652,7 @@ sql/              00 database · 01 raw · 02 quarantine · 03 terminology · 04
 analytics/        make_dashboard.py · make_warehouse_board.py · measure_performance.py
 docs/             architecture · data-dictionary · data-map · erd · performance · plans/
 powerbi/          measures.md (documented DAX) · validation.sql (its cross-check)
-tests/            255 invariants, including tests/dq/ — eleven runnable T-SQL checks
+tests/            281 invariants, including tests/dq/ — eleven runnable T-SQL checks
 ```
 
 ## Limitations

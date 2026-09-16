@@ -31,6 +31,8 @@ CSV_FILES = {
     "vs": "output/sdtm/vs.csv",
     "sdtm_conformance": "output/sdtm_conformance.csv",
     "uat": "output/uat_plan.csv",
+    "release_cohorts": "output/cohort_release_register.csv",
+    "release_gates": "output/evidence_release_gates.csv",
 }
 
 
@@ -46,6 +48,15 @@ def load_repository_data(root: Path = ROOT) -> dict[str, Any]:
     data["metrics"] = json.loads((root / "metrics.json").read_text(encoding="utf-8"))
     data["performance"] = json.loads(
         (root / "docs/performance_results.json").read_text(encoding="utf-8")
+    )
+    data["release_summary"] = json.loads(
+        (root / "output/evidence_release_summary.json").read_text(encoding="utf-8")
+    )
+    data["release_manifest"] = json.loads(
+        (root / "output/evidence_release_manifest.json").read_text(encoding="utf-8")
+    )
+    data["reverification"] = json.loads(
+        (root / "output/clinical_reverification_evidence.json").read_text(encoding="utf-8")
     )
 
     subjects = data["subjects"]
@@ -190,6 +201,8 @@ def source_ledger(data: dict[str, Any]) -> pd.DataFrame:
         "vs": "SDTM vital signs",
         "sdtm_conformance": "SDTM conformance findings",
         "uat": "Generated UAT coverage",
+        "release_cohorts": "Versioned cohort membership and evidence counts",
+        "release_gates": "Clinical data-cut release decision",
     }
     records = []
     for name, claim in claims.items():
@@ -207,6 +220,16 @@ def source_ledger(data: dict[str, Any]) -> pd.DataFrame:
                 "source": "docs/performance_results.json",
                 "rows": len(data["performance"]["queries"]),
                 "used for": "Before/after execution-plan evidence",
+            },
+            {
+                "source": "output/evidence_release_manifest.json",
+                "rows": len(data["release_manifest"]["input_sha256"]),
+                "used for": "Source hashes and re-verification triggers",
+            },
+            {
+                "source": "output/clinical_reverification_evidence.json",
+                "rows": 1,
+                "used for": "Controlled source-change invalidation proof",
             },
         ]
     )

@@ -1,0 +1,8 @@
+gate_id,name,status,observed,evidence
+COHORT-01,Cohort identity reconciliation,PASS,120 matched / 120 source subjects,data/subjects.csv ↔ output/sdtm/dm.csv
+QUERY-01,Injected defect to query reconciliation,PASS,49 query identities / 49 planted defects,data/injected_defects.csv ↔ output/query_log.csv
+SDTM-01,Implemented SDTM conformance checks,PASS,0 findings,output/sdtm_conformance.csv
+FHIR-01,FHIR planted-defect contract,PASS,24 expected rejects across 8 classes,manifest + executable SQL Server quarantine reconciliation in CI
+FHIR-02,Current runtime quarantine traceability,REVIEW,5 runtime rejects summarized; row-level reject ledger is not committed,metrics.json; protected row-level operational evidence intentionally absent
+PROV-01,Generator provenance,PASS,seed 20260806 · jar 7fdbc2951d30… · reference date 20260801,metrics.json retained full_generation provenance
+UAT-01,UAT execution,REVIEW,0 executed / 80 generated cases,output/uat_plan.csv; execution fields intentionally blank

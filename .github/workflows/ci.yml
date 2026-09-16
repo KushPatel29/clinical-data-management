@@ -70,6 +70,39 @@ jobs:
         run: python -m dashboard.smoke_test
 
   # ---------------------------------------------------------------------------
+  # The governed data-cut release. This job uses committed synthetic evidence,
+  # reproduces the cohort register and gate docket, and fails if published
+  # release artefacts drift from their source evidence.
+  # ---------------------------------------------------------------------------
+  release-assurance:
+    name: Clinical evidence release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install release dependencies
+        run: pip install pandas==3.0.3 pytest==9.1.1
+
+      - name: Rebuild the release packet
+        run: python governance/evidence_release.py
+
+      - name: Published release evidence must be reproducible
+        run: |
+          git diff --exit-code -- \
+            output/cohort_release_register.csv \
+            output/evidence_release_gates.csv \
+            output/evidence_release_summary.json \
+            output/evidence_release_manifest.json \
+            output/clinical_reverification_evidence.json \
+            output/clinical_evidence_release_packet.md
+
+      - name: Test release controls
+        run: pytest tests/test_evidence_release.py -v
+
+  # ---------------------------------------------------------------------------
   # Lint, scoped to the warehouse half.
   #
   # The CDM half predates this configuration and is excluded in pyproject.toml,

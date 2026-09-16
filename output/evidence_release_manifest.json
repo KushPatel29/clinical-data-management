@@ -1,0 +1,33 @@
+{
+  "data_classification": "Synthetic portfolio demonstration",
+  "decision": "REVIEW REQUIRED",
+  "demonstration_boundary": "All data and workflow assignments are synthetic. REVIEW is a deterministic evidence state, not a regulatory approval, database lock, investigator sign-off, or authorization for patient care.",
+  "hash_canonicalization": "Text line endings normalized to LF before SHA-256",
+  "human_approvals_recorded": 0,
+  "input_sha256": {
+    "data/edc_item_data.csv": "e4c1f0acac120803f704ee2bd4762e4bc7d631f040bcc3762c8c3dacf1b6405f",
+    "data/injected_defects.csv": "b2d1f998d3cbcfc10d95cd65ccc3c4ee15619fdebf8e915e6b8e80cae3a96c06",
+    "data/injected_fhir_defects.csv": "1982372e1f8dee660683fbf6202b21810b037da750d2fc3f0cd06e81f7905eb9",
+    "data/patient_change_manifest.csv": "0660df98b9ca1510046c8e1d9c8117d468ec3c24488dc10fd9a31fd2dd5e9983",
+    "data/subjects.csv": "c00e4ddea38d0ea97059b08c7ba627dc6507c49dc9363f308cafc07a2e66b439",
+    "metrics.json": "465c4d4ff9bdbc5d694aa27b99e923fb87feddb216b0965c66d61aa6cceff07e",
+    "output/query_log.csv": "07cf75e1b528a667bd7e34ea5d52df4d042d75fc13ac28a0d8cee0c094a0bbd7",
+    "output/sdtm/ae.csv": "c51a1d858adb65eaa97d3cf6dc4e13e942eae9466f572308f3ec62db5002af8d",
+    "output/sdtm/dm.csv": "37ae0a5cb9b4c80825e5bb97daaf3c963bcc744d25af7ed2996fed42a18f1d6a",
+    "output/sdtm/vs.csv": "c06c0586a980c480a24c4736294b1678d056b12a78c29aae82915435a140b9be",
+    "output/sdtm_conformance.csv": "65cd657a4f193062c54b6149d21d4cf52257f93010dcef839ba30d3e2f669e32",
+    "output/uat_plan.csv": "0fb7bc447c887b75fed2816a479a4910051263ab039ea50208cd7715fa8fa827"
+  },
+  "policy_sha256": "0bed03303ed05e274b2f921bd02c0c4eb063b0bbcb6b1bf48b2407128c824232",
+  "register_fingerprint": "eeca413793d22db5772163a47144a3f0ce76f65083f267efc5c41c44b4a4fefa",
+  "release_id": "SYN-2026-01-CUT-001",
+  "required_evidence_complete": true,
+  "reverification_triggers": [
+    "cohort definition or source population changes",
+    "source evidence hash changes",
+    "protocol, edit check, terminology or SDTM mapping changes",
+    "FHIR validation or quarantine rule changes",
+    "UAT execution status changes"
+  ],
+  "schema_version": 1
+}

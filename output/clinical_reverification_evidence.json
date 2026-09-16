@@ -1,0 +1,15 @@
+{
+  "baseline_register_fingerprint": "eeca413793d22db5772163a47144a3f0ce76f65083f267efc5c41c44b4a4fefa",
+  "boundary": "The mutation is in-memory test evidence; committed clinical artefacts are unchanged.",
+  "changed_gates": [
+    "COHORT-01"
+  ],
+  "changed_register_fingerprint": "4bbb1c97e991519fde115938518fc2cd9d9346cd0b025dcd95b82685e060f994",
+  "cohort_gate_after": "BLOCK",
+  "cohort_gate_before": "PASS",
+  "decision_after": "BLOCKED",
+  "decision_before": "REVIEW REQUIRED",
+  "probe": "synthetic cohort-membership mutation",
+  "source_data_mutated": false,
+  "trigger": "source population changed"
+}

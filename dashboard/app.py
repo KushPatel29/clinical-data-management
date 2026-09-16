@@ -199,6 +199,13 @@ with st.sidebar:
         "Synthetic data only. No protected health information, live database, "
         "or write operation is used by this app."
     )
+    release_state = data["release_summary"]["decision"]
+    st.markdown(f"**Data-cut decision** · {release_state}")
+    st.caption(
+        f"{data['release_summary']['gates_passed']} gates pass · "
+        f"{data['release_summary']['gates_review']} require review · "
+        "zero human approvals recorded"
+    )
     st.link_button(
         "View source repository ↗",
         "https://github.com/KushPatel29/clinical-data-management",
@@ -233,7 +240,8 @@ st.markdown(
       <p>A read-only command surface connecting trial operations, SDTM safety, FHIR R4
       quality, and measured SQL Server performance—without hiding the denominator.</p>
       <div class="hero-meta"><span>{escape(cohort_label)}</span><span>FHIR R4</span>
-      <span>SQL Server 2022</span><span>synthetic portfolio data</span></div>
+      <span>SQL Server 2022</span><span>data cut: {escape(release_state)}</span>
+      <span>synthetic portfolio data</span></div>
     </section>
     """,
     unsafe_allow_html=True,
@@ -258,13 +266,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab_study, tab_quality, tab_safety, tab_fhir, tab_proof = st.tabs(
+tab_study, tab_quality, tab_safety, tab_fhir, tab_release, tab_proof = st.tabs(
     [
         "01 · Study pulse",
         "02 · Quality & queries",
         "03 · Safety & coding",
         "04 · FHIR warehouse",
-        "05 · Proof & lineage",
+        "05 · Release assurance",
+        "06 · Proof & lineage",
     ]
 )
 
@@ -821,6 +830,90 @@ with tab_fhir:
     st.caption(
         f"{quality['patients_with_multiple_versions']} patients retain multiple versions; "
         f"maximum versions per patient: {quality['scd2_max_versions_per_patient']}."
+    )
+
+
+with tab_release:
+    st.markdown('<div class="section-kicker">CDM-REL-01 · governed data cut</div>', unsafe_allow_html=True)
+    st.subheader("Release evidence that can close, not a decorative green check")
+    release = data["release_summary"]
+    gates = data["release_gates"]
+    cohorts = data["release_cohorts"]
+    probe = data["reverification"]
+    claims(
+        [
+            (release["decision"], "data-cut decision", release["release_id"]),
+            (fmt_int(release["gates_passed"]), "release gates passed", f"{len(gates)} governed gates"),
+            (fmt_int(release["gates_review"]), "conditions requiring review", "runtime quarantine ledger + UAT execution"),
+            (fmt_int(release["human_approvals_recorded"]), "human approvals recorded", "explicit demonstration boundary"),
+        ]
+    )
+    st.markdown(
+        '<div class="finding warn"><strong>Review required.</strong> Five gates pass, '
+        'but the public evidence intentionally excludes a row-level operational '
+        'quarantine ledger and the 80 generated UAT cases are not represented as '
+        'executed. This interface therefore does not claim a regulatory release.</div>',
+        unsafe_allow_html=True,
+    )
+
+    left, right = st.columns([1.35, 1])
+    with left:
+        st.markdown("#### Release gate docket")
+        gate_display = gates[["gate_id", "name", "status", "observed", "evidence"]].copy()
+        st.dataframe(gate_display, width="stretch", hide_index=True)
+    with right:
+        gate_counts = gates["status"].value_counts().rename_axis("status").reset_index(name="gates")
+        fig = px.bar(
+            gate_counts,
+            x="status",
+            y="gates",
+            color="status",
+            text_auto=True,
+            category_orders={"status": ["PASS", "REVIEW", "BLOCK"]},
+            color_discrete_map={"PASS": TEAL, "REVIEW": AMBER, "BLOCK": CRIMSON},
+            labels={"status": "Decision", "gates": "Gates"},
+        )
+        fig.update_layout(showlegend=False)
+        plot(style_figure(fig, "Evidence release state", 360))
+
+    st.markdown("#### Versioned cohort register")
+    cohort_display = cohorts[
+        [
+            "cohort_id",
+            "label",
+            "owner",
+            "subjects",
+            "edc_rows",
+            "query_rows",
+            "ae_rows",
+            "member_fingerprint",
+        ]
+    ].copy()
+    st.dataframe(cohort_display, width="stretch", hide_index=True)
+    st.caption(
+        "Each cohort has an explicit definition, accountable role, evidence counts and "
+        "a deterministic membership fingerprint. These are workflow assignments, not signatures."
+    )
+
+    st.markdown("#### Re-verification proof")
+    st.markdown(
+        f'<div class="finding risk"><strong>Controlled failure.</strong> A one-subject '
+        f'synthetic membership change moves COHORT-01 from {escape(probe["cohort_gate_before"])} '
+        f'to {escape(probe["cohort_gate_after"])} and the release from '
+        f'{escape(probe["decision_before"])} to {escape(probe["decision_after"])}. '
+        'The source files remain untouched.</div>',
+        unsafe_allow_html=True,
+    )
+    st.code(release["register_fingerprint"], language=None)
+    st.caption(
+        "Register fingerprint · 12 required source hashes use LF-normalized SHA-256 so "
+        "the same evidence verifies identically on Windows and Linux."
+    )
+    st.download_button(
+        "Download release gates (CSV)",
+        gates.to_csv(index=False).encode("utf-8"),
+        "clinical_evidence_release_gates.csv",
+        "text/csv",
     )
 
 
