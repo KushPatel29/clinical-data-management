@@ -154,6 +154,7 @@ jobs:
   warehouse:
     name: SQL Server warehouse
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
 
     services:
       sqlserver:
@@ -307,7 +308,7 @@ jobs:
           # defect manifest. Release evidence is therefore validated in the
           # isolated release-assurance job against a clean checkout, not here
           # against intentionally mutated warehouse runtime state.
-          if ! pytest tests/ -q --ignore=tests/test_evidence_release.py > pytest.log 2>&1; then
+          if ! pytest tests/ --warehouse -q --ignore=tests/test_evidence_release.py > pytest.log 2>&1; then
             tail -30 pytest.log | while read -r line; do
               echo "::error::${line:0:180}"
             done

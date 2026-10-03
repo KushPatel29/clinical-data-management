@@ -20,9 +20,18 @@ of this repo still runs anywhere with nothing installed.
 from __future__ import annotations
 
 import os
+import re
 from contextlib import contextmanager
 
 DEFAULT_DATABASE = "ClinicalWarehouse"
+
+
+def database_name(database: str | None = None) -> str:
+    """Resolve one target before constructing connection strings or SQL."""
+    name = database or os.environ.get("CDM_SQL_DATABASE", DEFAULT_DATABASE)
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]{0,127}", name):
+        raise ValueError("database name must be 1–128 letters, digits, underscores or hyphens")
+    return name
 
 # Newest first. 17 is what ships with the SQL Server client tools; 18 changed the
 # default for Encrypt, which is why TrustServerCertificate is set explicitly
@@ -59,7 +68,7 @@ def connection_string(database: str | None = None, *, autocommit_master: bool = 
     if autocommit_master:
         database = "master"
     else:
-        database = database or os.environ.get("CDM_SQL_DATABASE", DEFAULT_DATABASE)
+        database = database_name(database)
 
     parts = [
         f"DRIVER={{{_installed_driver()}}}",

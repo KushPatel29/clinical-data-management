@@ -28,9 +28,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from db import migrate  # noqa: E402
 from db.connection import (  # noqa: E402
-    DEFAULT_DATABASE,
     SqlServerUnavailable,
     connect,
+    database_name,
     server_description,
 )
 from fhir import changefeed  # noqa: E402
@@ -163,7 +163,7 @@ def quality_measures(database: str | None) -> dict:
 def build(database: str | None = None, reset: bool = False, extract: Path = EXTRACT,
           run_changefeed: bool = True) -> dict:
     timer = Timer()
-    database = database or DEFAULT_DATABASE
+    database = database_name(database)
 
     print(f"building {database}")
     with timer.stage("schema"):

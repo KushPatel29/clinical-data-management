@@ -61,6 +61,8 @@ def subjects():
 # ---------------------------------------------------------------------------
 
 def pytest_addoption(parser):
+    parser.addoption("--warehouse", action="store_true", default=False,
+                     help="run SQL Server tests that write to the configured warehouse")
     parser.addoption("--live", action="store_true", default=False,
                      help="run tests that call the public HAPI FHIR server")
 
@@ -68,3 +70,11 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     config.addinivalue_line("markers", "live: hits a real network service")
     config.addinivalue_line("markers", "warehouse: needs a reachable SQL Server")
+
+
+def pytest_collection_modifyitems(config, items):
+    if not config.getoption("--warehouse"):
+        skip = pytest.mark.skip(reason="use --warehouse with a prepared test database")
+        for item in items:
+            if "warehouse" in item.keywords:
+                item.add_marker(skip)

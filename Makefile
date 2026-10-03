@@ -16,7 +16,7 @@ PYTHON      ?= python
 POPULATION  ?= 10000
 SAMPLE      ?= 100
 
-.PHONY: all cdm warehouse data schema ingest load dq perf test test-cdm clean help
+.PHONY: all cdm warehouse data schema ingest load dq perf test test-cdm test-warehouse clean help
 
 help:
 	@echo "make cdm         - CDM pipeline (stdlib only, no database)"
@@ -25,10 +25,11 @@ help:
 	@echo "make warehouse   - schema, ingest, shred, star, change feed, metrics"
 	@echo "make dq          - run the T-SQL data quality suite"
 	@echo "make perf        - measure three tuned queries and rewrite docs/performance.md"
-	@echo "make test        - the full pytest suite"
+	@echo "make test        - tests without warehouse writes"
+	@echo "make test-warehouse - opt in to the prepared SQL Server test warehouse"
 	@echo "make test-cdm    - only the tests that need no database"
 
-all: cdm warehouse dq test
+all: cdm warehouse dq test-warehouse
 
 # ---------------------------------------------------------------------------
 # The CDM half. Unchanged, and deliberately still dependency-free.
@@ -83,6 +84,9 @@ docs:
 
 test:
 	$(PYTHON) -m pytest tests/ -v
+
+test-warehouse:
+	$(PYTHON) -m pytest tests/ --warehouse -v
 
 # What a contributor with no SQL Server can run: everything except the
 # warehouse tests, which skip rather than fail.

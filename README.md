@@ -5,7 +5,7 @@
 ![CDISC](https://img.shields.io/badge/CDISC-CDASH%20%2B%20SDTM-0B5FA5)
 ![HL7 FHIR](https://img.shields.io/badge/HL7%20FHIR-R4-E4002B)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927)
-![Tests](https://img.shields.io/badge/tests-281%20passing-3B8C6E)
+![Tests](https://img.shields.io/badge/tests-295%20passing-3B8C6E)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 Two halves of the same problem, in one repository.
@@ -619,7 +619,8 @@ make warehouse      # schema, ingest, shred, star, change feed, metrics
 make dq             # the T-SQL data quality suite
 make perf           # measure three tuned queries, rewrite docs/performance.md
 python governance/evidence_release.py  # version cohorts, evaluate gates, fingerprint evidence
-make test           # the full suite
+make test           # tests without warehouse writes
+python -m pytest tests/ --warehouse  # opt in after preparing a separate test warehouse
 ```
 
 Connection details come from the environment, so the same code runs against a
@@ -632,8 +633,29 @@ export CDM_SQL_USER=sa                 # omit both for Windows authentication
 export CDM_SQL_PASSWORD=...
 ```
 
-Warehouse tests **skip** rather than fail when no server is reachable, so the
-suite still runs on a laptop with nothing installed.
+Warehouse tests require `--warehouse`: they re-ingest data and exercise loaders,
+so merely having a reachable SQL Server does not authorize them to write to it.
+They also skip when no server is reachable. Use a separate database and its
+matching generated extract for integration testing:
+
+```bash
+export CDM_SQL_DATABASE=ClinicalWarehouse_Test
+python fhir/synthea.py --population 100 --output data/synthea
+python db/build_warehouse.py
+python tests/dq/run_dq.py
+python analytics/measure_performance.py
+python docs/build_docs.py
+python -m pytest tests/ --warehouse
+```
+
+Run this sequence in a separate checkout: it rewrites generated metrics and
+documents. Every migration and load honors `CDM_SQL_DATABASE`; an explicit
+`--database` takes precedence. `--reset` drops the selected database and is only
+appropriate for disposable data. The source extract must stay available for the
+re-ingestion test. The committed measurements retain their original scale.
+
+The [3 October isolated verification](docs/VALIDATION_2026_10_03.md) records the
+sample build, rerun checks, results and explicit skips.
 
 ## Repo layout
 
@@ -652,7 +674,7 @@ sql/              00 database · 01 raw · 02 quarantine · 03 terminology · 04
 analytics/        make_dashboard.py · make_warehouse_board.py · measure_performance.py
 docs/             architecture · data-dictionary · data-map · erd · performance · plans/
 powerbi/          measures.md (documented DAX) · validation.sql (its cross-check)
-tests/            281 invariants, including tests/dq/ — eleven runnable T-SQL checks
+tests/            295 invariants, including tests/dq/ — eleven runnable T-SQL checks
 ```
 
 ## Limitations

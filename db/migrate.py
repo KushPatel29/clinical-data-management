@@ -31,9 +31,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from db.connection import (  # noqa: E402
-    DEFAULT_DATABASE,
     SqlServerUnavailable,
     connect,
+    database_name,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -47,7 +47,7 @@ def split_batches(script: str) -> list[str]:
 
 
 def substitute(script: str, database: str) -> str:
-    return script.replace("$(DatabaseName)", database)
+    return script.replace("$(DatabaseName)", database_name(database))
 
 
 def sql_files(only: str | None = None) -> list[Path]:
@@ -60,6 +60,9 @@ def sql_files(only: str | None = None) -> list[Path]:
 
 
 def drop_database(database: str) -> None:
+    database = database_name(database)
+    if database.lower() in {"master", "model", "msdb", "tempdb"}:
+        raise ValueError("cannot reset a SQL Server system database")
     with connect(master=True, autocommit=True) as cn:
         cur = cn.cursor()
         cur.execute(
@@ -69,10 +72,13 @@ def drop_database(database: str) -> None:
         )
 
 
-def apply(database: str = DEFAULT_DATABASE, only: str | None = None,
+def apply(database: str | None = None, only: str | None = None,
           verbose: bool = True) -> list[tuple[str, int, float]]:
     """Returns (filename, batches applied, seconds) per file."""
+    database = database_name(database)
     applied: list[tuple[str, int, float]] = []
+    if database.lower() in {"master", "model", "msdb", "tempdb"}:
+        raise ValueError("cannot migrate a SQL Server system database")
     for path in sql_files(only):
         script = substitute(path.read_text(encoding="utf-8"), database)
         batches = split_batches(script)
@@ -80,7 +86,7 @@ def apply(database: str = DEFAULT_DATABASE, only: str | None = None,
         # It also issues ALTER DATABASE, which is not allowed in a transaction.
         against_master = path.name.startswith("00_")
         started = time.perf_counter()
-        with connect(master=against_master, autocommit=against_master) as cn:
+        with connect(database, master=against_master, autocommit=against_master) as cn:
             cur = cn.cursor()
             for index, batch in enumerate(batches, start=1):
                 try:
@@ -110,9 +116,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--reset", action="store_true", help="drop the database first")
     args = parser.parse_args(argv)
 
-    import os
-
-    database = args.database or os.environ.get("CDM_SQL_DATABASE", DEFAULT_DATABASE)
+    database = database_name(args.database)
     try:
         if args.reset:
             print(f"dropping {database}")
