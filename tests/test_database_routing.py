@@ -1,9 +1,13 @@
 """An isolated build must never migrate, ingest or reset a different target."""
 
+import sys
 from contextlib import contextmanager
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from db import build_warehouse, connection, migrate
 
