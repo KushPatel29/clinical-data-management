@@ -163,6 +163,8 @@ class DefectInjector:
 
     def maybe_corrupt(self, payload: dict, source_ref: str, line_number: int | None):
         resource_type = payload.get("resourceType")
+        if not isinstance(resource_type, str):
+            return payload  # Already-invalid input belongs in quarantine, not the injector.
         index = self._seen.get(resource_type, 0)
         self._seen[resource_type] = index + 1
 
@@ -314,9 +316,11 @@ class Ingestor:
     def add(self, item: bulk.ReadResource) -> None:
         self.result.read += 1
 
-        if item.payload is None:
+        if not isinstance(item.payload, dict):
             self.reject(None, None, item.source_ref, item.line_number,
-                        "parse", item.parse_error or "unparseable", None, item.raw_text)
+                        "parse", item.parse_error or "resource is not a JSON object", None,
+                        item.raw_text if item.raw_text is not None
+                        else json.dumps(item.payload)[:4000])
             return
 
         try:
