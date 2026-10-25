@@ -1,4 +1,6 @@
-streamlit==1.60.0
+streamlit==1.66.1
+# Pillow 13 fixes the image decoder advisories affecting earlier releases.
+pillow==13.0.0
 pandas==3.0.3
 plotly==6.9.0
 
