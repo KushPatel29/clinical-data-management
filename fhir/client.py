@@ -227,8 +227,15 @@ class FhirClient:
         url: str | None = f"{self.base_url}/{resource_type}"
         page = 0
         emitted = 0
+        seen_urls: set[str] = set()
 
         while url:
+            request_url = str(self._client.build_request("GET", url, params=params).url)
+            if request_url in seen_urls:
+                raise FhirServerError(
+                    "repeated pagination URL; search stopped before replaying a page"
+                )
+            seen_urls.add(request_url)
             bundle = self._get(url, params=params)
             # Every page after the first uses the server's continuation URL,
             # which already carries the search state. Re-sending the original

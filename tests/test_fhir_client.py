@@ -149,8 +149,9 @@ def test_empty_bundle_is_an_empty_result_not_an_error():
 
 def test_max_pages_bounds_the_pull():
     def handler(request):
+        page = int(request.url.params.get("page", "1"))
         return httpx.Response(
-            200, json=bundle([entry("p")], next_url=f"{BASE}/Patient?_getpages=x"))
+            200, json=bundle([entry(f"p{page}")], next_url=f"{BASE}/Patient?page={page + 1}"))
 
     client, _ = client_for(handler)
     assert len(list(client.search("Patient", max_pages=3))) == 3
