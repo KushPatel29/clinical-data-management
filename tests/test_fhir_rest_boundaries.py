@@ -107,7 +107,9 @@ def test_malformed_pages_raise_a_typed_protocol_error(document):
 def test_json_depth_failure_is_a_typed_server_error():
     body = '[' * 1500 + '0' + ']' * 1500
     with FhirClient(BASE, transport=httpx.MockTransport(
-        lambda request: httpx.Response(200, content=body, headers={"content-type": "application/json"})
+        lambda request: httpx.Response(
+            200, content=body, headers={"content-type": "application/json"},
+        )
     )) as client, pytest.raises(FhirServerError):
         list(client.search("Patient"))
 
