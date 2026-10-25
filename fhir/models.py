@@ -593,6 +593,8 @@ def validate_resource(payload: dict[str, Any]) -> FhirResource:
     resource_type = payload.get("resourceType")
     if not resource_type:
         raise FhirValidationError("resource has no resourceType")
+    if not isinstance(resource_type, str):
+        raise FhirValidationError("resourceType is not a string")
 
     model = MODELS.get(resource_type)
     if model is None:

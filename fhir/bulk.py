@@ -35,18 +35,39 @@ class ReadResource:
 
     @property
     def ok(self) -> bool:
-        return self.payload is not None
+        return isinstance(self.payload, dict)
+
+
+def _resource(payload: object, source_ref: str, line_number: int | None,
+              raw_text: str | None = None) -> ReadResource:
+    """Only objects can cross the reader boundary as resources."""
+    if isinstance(payload, dict):
+        return ReadResource(payload=payload, source_ref=source_ref, line_number=line_number)
+    return ReadResource(
+        payload=None, source_ref=source_ref, line_number=line_number,
+        parse_error="resource is not a JSON object",
+        raw_text=(raw_text if raw_text is not None else json.dumps(payload))[:4000],
+    )
 
 
 def _iter_ndjson(path: Path) -> Iterator[ReadResource]:
-    with open(path, encoding="utf-8") as handle:
-        for line_number, line in enumerate(handle, start=1):
+    with open(path, "rb") as handle:
+        for line_number, raw_line in enumerate(handle, start=1):
+            try:
+                line = raw_line.decode("utf-8")
+            except UnicodeDecodeError:
+                yield ReadResource(
+                    payload=None, source_ref=path.name, line_number=line_number,
+                    parse_error="line is not valid UTF-8",
+                    raw_text=raw_line[:4000].decode("utf-8", errors="replace"),
+                )
+                continue
             line = line.strip()
             if not line:
                 continue
             try:
                 payload = json.loads(line)
-            except json.JSONDecodeError as exc:
+            except (ValueError, RecursionError) as exc:
                 yield ReadResource(
                     payload=None,
                     source_ref=path.name,
@@ -57,24 +78,37 @@ def _iter_ndjson(path: Path) -> Iterator[ReadResource]:
                     raw_text=line[:4000],
                 )
                 continue
-            yield ReadResource(payload=payload, source_ref=path.name, line_number=line_number)
+            yield _resource(payload, path.name, line_number, line)
 
 
 def _iter_bundle(path: Path) -> Iterator[ReadResource]:
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
+    except (ValueError, RecursionError) as exc:
+        encoding = "UTF-8" if isinstance(exc, UnicodeDecodeError) else "JSON"
         yield ReadResource(
             payload=None, source_ref=path.name, line_number=None,
-            parse_error=f"file is not valid JSON: {exc}",
+            parse_error=f"file is not valid {encoding}: {exc}",
         )
         return
 
+    if not isinstance(document, dict):
+        yield _resource(document, path.name, None)
+        return
     if document.get("resourceType") != "Bundle":
         yield ReadResource(payload=document, source_ref=path.name, line_number=None)
         return
 
-    for index, entry in enumerate(document.get("entry") or [], start=1):
+    entries = document.get("entry")
+    if entries is None:
+        entries = []
+    if not isinstance(entries, list):
+        yield ReadResource(
+            payload=None, source_ref=path.name, line_number=None,
+            parse_error="bundle entry is not a JSON array", raw_text=json.dumps(entries)[:4000],
+        )
+        return
+    for index, entry in enumerate(entries, start=1):
         resource = entry.get("resource") if isinstance(entry, dict) else None
         if resource is None:
             yield ReadResource(
@@ -82,7 +116,7 @@ def _iter_bundle(path: Path) -> Iterator[ReadResource]:
                 parse_error="bundle entry has no resource",
             )
             continue
-        yield ReadResource(payload=resource, source_ref=f"{path.name}#{index}", line_number=index)
+        yield _resource(resource, f"{path.name}#{index}", index)
 
 
 def read_file(path: Path) -> Iterator[ReadResource]:
@@ -146,6 +180,8 @@ def count_resources(directory: Path,
         if item.payload is None:
             counts["(unparsed)"] = counts.get("(unparsed)", 0) + 1
             continue
-        resource_type = item.payload.get("resourceType", "(untyped)")
+        resource_type = item.payload.get("resourceType")
+        if not isinstance(resource_type, str) or not resource_type:
+            resource_type = "(untyped)"
         counts[resource_type] = counts.get(resource_type, 0) + 1
     return counts
