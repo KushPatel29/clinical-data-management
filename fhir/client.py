@@ -73,6 +73,7 @@ class FetchStats:
     pages: int = 0
     matched: int = 0
     included: int = 0
+    outcomes: int = 0
     status_counts: dict[int, int] = field(default_factory=dict)
 
     def record_status(self, status: int) -> None:
@@ -174,14 +175,18 @@ class FhirClient:
                 )
 
             try:
-                return response.json()
-            except ValueError as exc:
+                document = response.json()
+            except (ValueError, RecursionError) as exc:
                 # A 200 whose body is an HTML error page. Retrying is pointless;
                 # the caller needs to see what actually came back.
                 raise FhirServerError(
                     f"200 response was not JSON ({response.headers.get('content-type')}): "
                     f"{response.text[:200]!r}"
                 ) from exc
+
+            if not isinstance(document, dict):
+                raise FhirServerError("expected a JSON object from the FHIR server")
+            return document
 
         raise FhirServerError(f"exhausted retries: {last_error}")
 
@@ -194,10 +199,85 @@ class FhirClient:
         `link` is 0..* and its entries are unordered, so this searches for the
         relation rather than indexing. A missing `link` array is normal.
         """
-        for link in bundle.get("link") or []:
-            if link.get("relation") == "next" and link.get("url"):
-                return link["url"]
-        return None
+        links = bundle.get("link")
+        if links is None:
+            return None
+        if not isinstance(links, list):
+            raise FhirServerError("Bundle.link must be an array")
+        next_url = None
+        for link in links:
+            if not isinstance(link, dict):
+                raise FhirServerError("Bundle.link entries must be objects")
+            url = link.get("url")
+            if url is not None and not isinstance(url, str):
+                raise FhirServerError("Bundle.link.url must be a string")
+            if link.get("relation") == "next" and url and next_url is None:
+                next_url = url
+        return next_url
+
+    @staticmethod
+    def validate_search_limits(*, count: int, max_pages: int | None,
+                               max_resources: int | None) -> None:
+        """Reject invalid limits before HTTP requests or ingestion side effects.
+
+        `_count=0` is a FHIR count-only query. Zero client fetch limits instead
+        stop iteration without making that query. None leaves a client cap open.
+        """
+        for name, value in (("count", count), ("max_pages", max_pages),
+                            ("max_resources", max_resources)):
+            if value is None and name != "count":
+                continue
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"{name} must be a non-negative integer")
+
+    @staticmethod
+    def _search_entries(bundle: dict) -> tuple[list[tuple[dict, str]], int]:
+        """Validate the whole page before exposing records from that page.
+
+        Search OperationOutcome entries are diagnostics, not clinical results.
+        Warnings are counted; error/fatal outcomes fail even under HTTP 200.
+        """
+        entries = bundle.get("entry")
+        if entries is None:
+            return [], 0
+        if not isinstance(entries, list):
+            raise FhirServerError("Bundle.entry must be an array")
+        records = []
+        outcomes = 0
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise FhirServerError("Bundle.entry entries must be objects")
+            resource = entry.get("resource")
+            if resource is None:
+                continue
+            if not isinstance(resource, dict):
+                raise FhirServerError("Bundle.entry.resource must be an object")
+            if not resource:
+                continue
+            search = entry.get("search")
+            if search is None:
+                search = {}
+            if not isinstance(search, dict):
+                raise FhirServerError("Bundle.entry.search must be an object")
+            mode = search.get("mode", "match")
+            if mode not in ("match", "include", "outcome"):
+                raise FhirServerError("unexpected Bundle.entry.search.mode")
+            if mode == "outcome":
+                if resource.get("resourceType") != "OperationOutcome":
+                    raise FhirServerError("search outcome must contain an OperationOutcome")
+                issues = resource.get("issue", [])
+                if (not isinstance(issues, list) or not issues
+                        or any(not isinstance(i, dict) for i in issues)):
+                    raise FhirServerError("OperationOutcome.issue must be a non-empty object array")
+                if any(i.get("severity") not in ("fatal", "error", "warning", "information")
+                       for i in issues):
+                    raise FhirServerError("unexpected OperationOutcome issue severity")
+                if any(i.get("severity") in ("error", "fatal") for i in issues):
+                    raise FhirServerError("search returned an error/fatal OperationOutcome")
+                outcomes += 1
+            else:
+                records.append((resource, mode))
+        return records, outcomes
 
     def search(
         self,
@@ -215,7 +295,13 @@ class FhirClient:
         `search_mode` is `"match"` for a result and `"include"` for a resource
         pulled in by `_include`. Counting includes as results is the classic way
         an `_include` query reports twice the rows it found.
+
+        Diagnostic outcome entries are counted in stats.outcomes rather than
+        yielded as clinical resources. max_resources counts matches and includes.
         """
+        self.validate_search_limits(count=count, max_pages=max_pages, max_resources=max_resources)
+        if max_pages == 0 or max_resources == 0:
+            return
         params: dict[str, Any] = {"_count": count}
         if since:
             params["_since"] = since
@@ -250,11 +336,10 @@ class FhirClient:
                     f"expected a Bundle, got {bundle.get('resourceType')!r}"
                 )
 
-            for entry in bundle.get("entry") or []:
-                resource = entry.get("resource")
-                if not resource:
-                    continue
-                mode = (entry.get("search") or {}).get("mode", "match")
+            records, outcomes = self._search_entries(bundle)
+            next_url = self.next_link(bundle)
+            self.stats.outcomes += outcomes
+            for resource, mode in records:
                 if mode == "match":
                     self.stats.matched += 1
                 else:
@@ -266,7 +351,7 @@ class FhirClient:
 
             if max_pages is not None and page >= max_pages:
                 return
-            url = self.next_link(bundle)
+            url = next_url
 
     def capabilities(self) -> dict:
         """The server's CapabilityStatement — the honest way to find out what a
