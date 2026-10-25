@@ -510,6 +510,7 @@ def ingest_rest(resource_type: str, *, base_url: str | None = None, count: int =
                 database: str | None = None) -> tuple[IngestResult, dict]:
     from fhir.client import DEFAULT_BASE_URL, FhirClient
 
+    FhirClient.validate_search_limits(count=count, max_pages=max_pages, max_resources=max_resources)
     started = time.perf_counter()
     base_url = base_url or DEFAULT_BASE_URL
 
@@ -537,6 +538,7 @@ def ingest_rest(resource_type: str, *, base_url: str | None = None, count: int =
     return result, {
         "requests": stats.requests, "retries": stats.retries, "pages": stats.pages,
         "matched": stats.matched, "included": stats.included,
+        "outcomes": stats.outcomes,
         "status_counts": stats.status_counts,
     }
 
@@ -602,10 +604,17 @@ def _reason_slug(reason: str) -> str:
     return reason.split(":")[0].strip().replace(" ", "_")[:60] or "other"
 
 
+def _non_negative_int(value: str) -> int:
+    number = int(value)
+    if number < 0:
+        raise argparse.ArgumentTypeError("must be a non-negative integer")
+    return number
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Ingest FHIR resources into raw.fhir_resource.")
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
-    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--limit", type=_non_negative_int, default=None)
     parser.add_argument("--inject-invalid", type=int, default=0,
                         help="corrupt N resources per defect class and write a manifest")
     parser.add_argument("--all-types", action="store_true",
@@ -615,10 +624,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--resource", default="Patient",
                         help="one resource type, or several comma-separated")
     parser.add_argument("--base-url", default=None)
-    parser.add_argument("--count", type=int, default=50)
+    parser.add_argument("--count", type=_non_negative_int, default=50)
     parser.add_argument("--since", default=None)
     parser.add_argument("--include", action="append", default=None)
-    parser.add_argument("--max-pages", type=int, default=3)
+    parser.add_argument("--max-pages", type=_non_negative_int, default=3)
     parser.add_argument("--record-metrics", action="store_true",
                         help="write the live_rest block of metrics.json from this pull")
     args = parser.parse_args(argv)
@@ -626,6 +635,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.rest:
             resources = [r.strip() for r in args.resource.split(",") if r.strip()]
+            if not resources:
+                parser.error("--resource must name at least one resource type")
             observations: dict[str, dict] = {}
             result = None
             for resource_type in resources:
@@ -645,6 +656,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"REST {resource_type}: {stats['pages']} pages, "
                       f"{stats['requests']} requests, {stats['retries']} retries, "
                       f"{stats['matched']} match / {stats['included']} include, "
+                      f"{stats.get('outcomes', 0)} diagnostic outcomes, "
                       f"{result.rejected} rejected")
             if args.record_metrics:
                 from fhir.client import DEFAULT_BASE_URL
