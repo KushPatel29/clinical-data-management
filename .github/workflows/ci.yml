@@ -141,7 +141,7 @@ jobs:
         run: pip install pytest httpx pydantic
 
       - name: Test the models and the REST client
-        run: pytest tests/test_fhir_models.py tests/test_fhir_client.py -v
+        run: pytest tests/test_fhir_models.py tests/test_fhir_client.py tests/test_fhir_pagination_recovery.py -v
 
   # ---------------------------------------------------------------------------
   # The warehouse, end to end, against a real SQL Server 2022.
