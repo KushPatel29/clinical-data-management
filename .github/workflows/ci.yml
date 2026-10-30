@@ -69,6 +69,15 @@ jobs:
       - name: Render the full cohort and a site-filtered cohort
         run: python -m dashboard.smoke_test
 
+      # Every widget choice, one at a time from the default state, against the
+      # committed artefacts the live console serves. It runs here and not in
+      # the warehouse job, whose quarantine self-test deliberately rewrites the
+      # defect manifest this page reads.
+      - name: Every widget choice runs without raising
+        run: |
+          pip install pytest==9.1.1
+          pytest tests/test_every_choice_runs.py -v
+
   # ---------------------------------------------------------------------------
   # The governed data-cut release. This job uses committed synthetic evidence,
   # reproduces the cohort register and gate docket, and fails if published
@@ -308,10 +317,10 @@ jobs:
           PY
           python docs/build_docs.py
           # The quarantine self-test above deliberately rewrites its synthetic
-          # defect manifest. Release evidence is therefore validated in the
-          # isolated release-assurance job against a clean checkout, not here
-          # against intentionally mutated warehouse runtime state.
-          if ! pytest tests/ --warehouse -q --ignore=tests/test_evidence_release.py > pytest.log 2>&1; then
+          # defect manifest. Release evidence, and every widget choice on the
+          # console that reads it, are therefore validated in clean-checkout
+          # jobs, not here against intentionally mutated warehouse runtime state.
+          if ! pytest tests/ --warehouse -q --ignore=tests/test_evidence_release.py --ignore=tests/test_every_choice_runs.py > pytest.log 2>&1; then
             tail -30 pytest.log | while read -r line; do
               echo "::error::${line:0:180}"
             done
